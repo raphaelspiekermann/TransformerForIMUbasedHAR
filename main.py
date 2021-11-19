@@ -1,6 +1,6 @@
-import util.dataloader as dataloader
 import json
 import os
+from util.IMUDataset import IMUDataset
 
 
 def read_config():
@@ -11,6 +11,20 @@ def read_config():
         config = json.load(read_file)
     return config
 
-if __name__ == '__main__':
+
+def main():
     cfg = read_config()
-    dataloader.load_data(config=cfg)
+    create_IMUDataset(cfg)
+
+
+def create_IMUDataset(config):
+    df = IMUDataset(config)
+    print('[INFO] -- IMU-shape = {}'.format(df.imu.shape))
+    print('[INFO] -- Labels-shape = {}'.format(df.labels.shape))
+
+    print(df[0])
+    print(len(df))
+
+
+if __name__ == '__main__':
+    main()

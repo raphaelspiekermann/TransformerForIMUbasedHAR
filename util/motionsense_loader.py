@@ -104,8 +104,6 @@ def creat_time_series(dt_list, act_labels, trial_codes, path, mode="mag", labele
     dataset = pd.DataFrame(data=dataset, columns=cols)
     return dataset
 
-#________________________________
-
 
 def load(config):
     ACT_LABELS = ["dws","ups", "wlk", "jog", "std", "sit"]
@@ -127,13 +125,15 @@ def load(config):
     trial_codes = [TRIAL_CODES[act] for act in act_labels]
     dt_list = set_data_types(sdt)
 
-    path_data_motionsense = config.get("path_to_home_dir") + 'data/' + config.get("dataset") + '/'
+    path_data_motionsense = config.get("path_to_data_dir") + 'data/motionsense/'
 
     dataset = creat_time_series(dt_list, act_labels, trial_codes, path_data_motionsense, mode="raw", labeled=True)
     print("[INFO] -- Shape of time-Series dataset:"+str(dataset.shape))    
     print(dataset.head())
 
-    path_input = config.get("path_to_home_dir") + 'input/'
+
+    path_input = config.get("path_to_data_dir") + 'input/'
+
 
     features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'attitude.roll', 'attitude.pitch', 'attitude.yaw']]
     features = features.rename(columns={
@@ -145,15 +145,21 @@ def load(config):
         'attitude.yaw' : 'att.yaw',
         })
     print(features.head())
-    features.to_csv(path_input + 'features.csv', index=False)
-
 
     labels = dataset[['act']]
     labels = labels.rename(columns={'act':'label'})
     print(labels.head())
+
+    infos = dataset[['id', 'trial']]
+    infos = infos.rename(columns={'id':'person_id', 'trial':'recording_nr'})
+    print(infos.head())
+
+    # Exporting features, labels and infos as CSVs
+    print('[INFO] -- Writing features.csv')
+    features.to_csv(path_input + 'features.csv', index=False)
+    
+    print('[INFO] -- Writing labels.csv')
     labels.to_csv(path_input + 'labels.csv', index=False)
 
-    
-    test_person_id = dataset[['id']]
-    print(test_person_id.head())
-    test_person_id.to_csv(path_input + 'test_person_ids.csv', index=False)
+    print('[INFO] -- Writing labels.csv')
+    infos.to_csv(path_input + 'infos.csv', index=False)
