@@ -105,7 +105,7 @@ def creat_time_series(dt_list, act_labels, trial_codes, path, mode="mag", labele
     return dataset
 
 
-def load(config):
+def load(path_to_data):
     ACT_LABELS = ["dws","ups", "wlk", "jog", "std", "sit"]
     TRIAL_CODES = {
         ACT_LABELS[0]:[1,2,11],
@@ -125,14 +125,14 @@ def load(config):
     trial_codes = [TRIAL_CODES[act] for act in act_labels]
     dt_list = set_data_types(sdt)
 
-    path_data_motionsense = config.get("path_to_data_dir") + 'data/motionsense/'
+    path_data_motionsense = path_to_data + 'data/motionsense/'
 
     dataset = creat_time_series(dt_list, act_labels, trial_codes, path_data_motionsense, mode="raw", labeled=True)
     print("[INFO] -- Shape of time-Series dataset:"+str(dataset.shape))    
     print(dataset.head())
 
 
-    path_input = config.get("path_to_data_dir") + 'input/'
+    path_input = path_to_data + 'input/'
 
 
     features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'attitude.roll', 'attitude.pitch', 'attitude.yaw']]

@@ -5,10 +5,10 @@ import pandas as pd
 
 
 
-def load(config):
+def load(path_to_data, classification_type='attributes'):
     
-    load_attributes = config.get('classification_type') == 'attributes'
-    path = config.get("path_to_data_dir") + 'data/lara/'
+    load_attributes = classification_type == 'attributes'
+    path = path_to_data + 'data/lara/'
 
     directories = ['S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13', 'S14']
     scenarios = ['L{num:02d}'.format(num=x) for x in [1,2,3]]
@@ -54,7 +54,7 @@ def load(config):
     infos = pd.DataFrame(data=infos, columns=['person_id', 'recording_nr'])
     print(infos.head())
 
-    path_input = config.get("path_to_data_dir") + 'input/'
+    path_input = path_to_data + 'input/'
 
 
     # Exporting features, labels and infos as CSVs

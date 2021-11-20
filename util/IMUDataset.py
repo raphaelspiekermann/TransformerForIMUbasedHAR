@@ -11,7 +11,7 @@ class IMUDataset(Dataset):
     """
     def __init__(self, config):
         #initialisation variables
-        path_to_input_data = config.get('path_to_data_dir') + 'input/'
+        path_to_input_data = config.get('path_to_data') + 'input/'
         features_path = path_to_input_data + 'features.csv'
         labels_path = path_to_input_data + 'labels.csv'
         infos_path = path_to_input_data + 'infos.csv'
@@ -35,12 +35,12 @@ class IMUDataset(Dataset):
         infos = infos.to_numpy()
 
         n = self.labels.shape[0]
-        print('[INFO] -- n = {}'.format(n))
-
         tmp_start_indices = list(range(0, n - window_size + 1, window_shift))
 
         #Including only Windows that come from the same recording
         self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]),tmp_start_indices))
+        
+        print('[INFO] -- {} windows were created from {} samples with a windowsize of {} and a stepsize of {}'.format(len(self.start_indices), n, window_size, window_shift))
 
         self.labeling_mode = labeling_mode
         self.window_size = window_size
@@ -62,7 +62,8 @@ class IMUDataset(Dataset):
             label = window_labels[0]
             
         if labeling_mode == 'middle':
-            label = window_labels[int(len(window_labels) / 2)]
+            #TODO Remove last brackets
+            label = window_labels[int(len(window_labels) / 2)][0]
             
         if labeling_mode ==  'last':
             label = window_labels[-1]
