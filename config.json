@@ -5,12 +5,16 @@
 	"load_data" : false,
 	"load_model" : "",
 
+
     "mode" : "train",
     "labeling_mode" : "middle",
     "normalize_data" : false,
     "window_size" : 100,
     "step_size" : 25,
     "classification_type" : "attributes",
+
+	"np_seed" : 42,
+	"test_size_ratio" : 0.1,
 
     "n_freq_print": 20,
 	"n_freq_checkpoint": 3,

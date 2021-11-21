@@ -13,7 +13,6 @@ from models.IMUCLSBaseline import IMUCLSBaseline
 from util.IMUDataset import IMUDataset
 from sklearn.metrics import confusion_matrix
 
-
 def read_config():
     __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -35,12 +34,11 @@ def main():
         path_to_data = config.get('path_to_data')
         loader_name = config.get('dataset')
         classification_type = config.get('classification_type')
-        dataloader.load_data(path_to_data, loader_name, classification_type)
-
-    #Preprocessing
-    #TODO
-    if config.get('normalize_data'):
-        pass
+        dataloader.load_data(path_to_data, loader_name, classification_type) 
+        #Preprocessing
+        #TODO
+        if config.get('normalize_data'):
+            pass
 
     #Initializing Cuda
     device, device_id = init_cuda(config.get('device_id'))
@@ -55,12 +53,15 @@ def main():
     if config.get('load_model') != '':
         load_checkpoint(model, config.get('path_to_data'), config.get('load_model'), device_id)
     
+    #Loading Dataset
+    dataset = split_data(config)
+
     #Training/Evaluating Model
     if config.get('mode') == 'train':
-        train(model, device, config)
+        train(model, device, train_data, config)
     else:
         if config.get('mode') == 'test':
-            test(model, device, config)
+            test(model, device, test_data, config)
         else:
             print('mode = {} does not exist'.format(config.get('mode')))
             return
@@ -68,6 +69,33 @@ def main():
     #Exporting results
 
 #############
+def split_data(config):
+    test_ratio = config.get('test_size_ratio')
+    test_ratio = test_ratio if 0 < test_ratio < 1 else 0.1
+    
+    logging.info('Creating train_data with {:.0%} test_size_ratio'.format(test_ratio))
+    train_data = IMUDataset(config)
+    
+    logging.info('Creating train_data with {:.0%} train_size_ratio'.format(1-test_ratio))
+    test_data = IMUDataset(config)
+    
+    n = len(train_data)
+
+    np.random.seed(config.get('np.seed'))
+    np.random.permutation(n)
+
+    limit_train_idx = int(n * test_ratio)
+    start_test_idx = limit_train_idx + 1
+
+    train_data.start_indices = train_data.start_indices[:limit_train_idx]
+    test_data.start_indices = test_data.start_indices[start_test_idx:]
+    
+    logging.info('Train_data size = {}'.format(len(train_data)))
+    logging.info('Test_data size = {}'.format(len(test_data)))
+
+    return train_data if config.get('mode')=='train' else test_data
+
+
 
 def load_checkpoint(model, path_to_data, file_name, device_id):
     path_to_checkpoint = path_to_data + 'checkpoints/' + file_name
@@ -90,7 +118,7 @@ def init_cuda(device_id_cfg):
     np.random.seed(numpy_seed)
     return torch.device(device_id), device_id
 
-def train(model, device, config):
+def train(model, device, dataset, config):
     # Set to train mode
         model.train()
 
@@ -109,7 +137,6 @@ def train(model, device, config):
         # Set the dataset and data loader
         logging.info("Start train data preparation")
 
-        dataset = IMUDataset(config)
         loader_params = {'batch_size': config.get('batch_size'),
                                   'shuffle': True,
                                   'num_workers': config.get('n_workers')}
@@ -173,7 +200,7 @@ def train(model, device, config):
         #loss_fig_path = checkpoint_prefix + "_loss_fig.png"
         #utils.plot_loss_func(sample_count, loss_vals, loss_fig_path)
 
-def test(model, device, config):
+def test(model, device, dataset, config):
     # Set to eval mode
         model.eval()
 
@@ -182,7 +209,6 @@ def test(model, device, config):
         window_shift = config.get("window_shift")
         window_size = config.get("window_size")
         input_size = config.get("input_dim")
-        dataset = IMUDataset(config)
         loader_params = {'batch_size': 1,
                          'shuffle': False,
                          'num_workers': config.get('n_workers')}
