@@ -9,7 +9,7 @@ class IMUDataset(Dataset):
     """
         A class representing a dataset for IMU learning tasks
     """
-    def __init__(self, config):
+    def __init__(self, config, logging_active=True):
         # Initialising variables
         path_to_input_data = config.get('path_to_data') + 'input/'
         features_path = path_to_input_data + 'features.csv'
@@ -33,17 +33,20 @@ class IMUDataset(Dataset):
             raise 'window_shift {} isnt valid'.format(window_shift)
 
         # Reading IMU-data
-        logging.info('Reading {}'.format(features_path))
+        if logging_active:
+            logging.info('Reading {}'.format(features_path))
         imu = pd.read_csv(features_path)
         self.imu = imu.iloc[:].values
         
         # Reading label-data
-        logging.info('Reading {}'.format(labels_path))
+        if logging_active:
+            logging.info('Reading {}'.format(labels_path))
         labels = pd.read_csv(labels_path)
         self.labels = labels.iloc[:].values
         
         # Reading informations
-        logging.info('Reading {}'.format(infos_path))
+        if logging_active:
+            logging.info('Reading {}'.format(infos_path))
         infos = pd.read_csv(infos_path)
         infos = infos.to_numpy()
 
@@ -53,10 +56,11 @@ class IMUDataset(Dataset):
         #Including only Windows that come from the same recording
         self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]),tmp_start_indices))
         
-        logging.info('n_windows = {}'.format(len(self.start_indices)))
-        logging.info('n_samples = {}'.format(n))
-        logging.info('window_size = {}'.format(window_size))
-        logging.info('stepsize = {}'.format(window_shift))
+        if logging_active:
+            logging.info('n_samples = {}'.format(n))
+            logging.info('n_windows = {}'.format(len(self.start_indices)))
+            logging.info('window_size = {}'.format(window_size))
+            logging.info('stepsize = {}'.format(window_shift))
 
         self.labeling_mode = labeling_mode
         self.window_size = window_size
@@ -75,7 +79,7 @@ class IMUDataset(Dataset):
 
         labeling_mode = self.labeling_mode
         if labeling_mode == 'first': 
-            label = window_labels[0][0]
+            label = window_labels[0]
             
         if labeling_mode == 'middle':
             #TODO Remove last brackets

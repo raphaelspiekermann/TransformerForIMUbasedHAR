@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 
 
-
-
 def load(path_to_data, classification_type='attributes'):
     
     load_attributes = classification_type == 'attributes'
@@ -43,7 +41,6 @@ def load(path_to_data, classification_type='attributes'):
                     features = np.append(features, raw_vals.to_numpy(), axis=0)
                     labels = np.append(labels, raw_lbls.to_numpy(), axis=0)
                     infos = np.append(infos, infs, axis=0)
-
 
     features = pd.DataFrame(data=features, columns=raw_vals.columns)
     print(features.head())

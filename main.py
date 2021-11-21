@@ -7,12 +7,9 @@ from util import utils
 import os
 import util.dataloader as dataloader
 from os.path import join
-from models.IMUTransformerEncoder import IMUTransformerEncoder
-from models.IMUCLSBaseline import IMUCLSBaseline
+from models.model import get_model
 from util.IMUDataset import IMUDataset
 from sklearn.metrics import confusion_matrix
-
-
 
 def main():
     #Reading config
@@ -22,77 +19,69 @@ def main():
     utils.init_logger(config.get('path_to_home'), config.get('path_to_data'))
 
     #Loading data
-    if config.get('load_data'):
-        path_to_data = config.get('path_to_data')
-        loader_name = config.get('dataset')
-        classification_type = config.get('classification_type')
-        dataloader.load_data(path_to_data, loader_name, classification_type) 
-        #Preprocessing
-        #TODO
-        if config.get('normalize_data'):
-            pass
-
+    path_to_data = config.get('path_to_data')
+    loader_name = config.get('dataset')
+    classification_type = config.get('classification_type')
+    dataloader.load_data(path_to_data, loader_name, classification_type) 
+    
     #Initializing Cuda
     device, device_id = init_cuda(config.get('device_id'))
 
     #Choosing Model
-    if config.get("use_baseline"):
-        model = IMUCLSBaseline(config).to(device)
-    else:
-        model = IMUTransformerEncoder(config).to(device)
+    model = get_model(config).to(device)
 
     #Loading checkpoint if needed (Empty file name -> No Checkpoint will be loaded)
     if config.get('load_model') != '':
         load_checkpoint(model, config.get('path_to_data'), config.get('load_model'), device_id)
     
     #Loading Dataset
-    dataset = split_data(config)
+    train_data, test_data = split_data(config)
 
     #Training/Evaluating Model
     if config.get('mode') == 'train':
-        train(model, device, dataset, config)
+        train(model, device, train_data, config)
     else:
         if config.get('mode') == 'test':
-            test(model, device, dataset, config)
+            test(model, device, test_data, config)
         else:
             if config.get('mode') == 'train_test':
-                #TODO full walkthrough
-                pass
+                for _ in range(config.get('n_loops')):
+                    train(model, device, train_data, config)
+                    test(model, device, test_data, config)
+
             else:
                 raise 'mode = {} does not exist'.format(config.get('mode'))
                 
-
     #Exporting results
 
-#############
+
 def split_data(config):
     test_size = config.get('test_size')
     test_ratio = test_size if 0 < test_size <= 1 else 0.1
     train_ratio = 1 - test_ratio
 
-    dataset = IMUDataset(config)
-    logging.info('labels of orig dataset \n{}'.format(eval_dataset(dataset)))
+    train_data = IMUDataset(config)
+    test_data = IMUDataset(config, logging_active=False)
+    logging.info('label-distribution of original dataset \n{}'.format(eval_dataset(train_data)))
 
-    n = len(dataset)
+    n = len(train_data)
     split_idx = int(n * train_ratio)
 
     np_seed = config.get('np_seed')
     start_indices_permutation = np.random.RandomState(seed=np_seed).permutation(n)
-    start_indices = [dataset.start_indices[i] for i in start_indices_permutation]
+    start_indices = [train_data.start_indices[i] for i in start_indices_permutation]
 
-    if config.get('mode')=='train':
-        logging.info('Creating train_data with ratio = {:.0%}'.format(train_ratio))
-        dataset.start_indices = start_indices[:split_idx] 
-        logging.info('n_train_data = {}'.format(len(dataset)))
-        logging.info('labels of extracted train_data \n{}'.format(eval_dataset(dataset)))
+    logging.info('Creating train_data with ratio = {:.0%}'.format(train_ratio))
+    train_data.start_indices = start_indices[:split_idx] 
+    logging.info('n_train_data = {}'.format(len(train_data)))
+    logging.info('label-distribution of extracted train_data \n{}'.format(eval_dataset(train_data)))
 
-    else:
-        logging.info('Creating test_data with ratio = {:.0%}'.format(test_ratio))
-        dataset.start_indices = start_indices[split_idx:]
-        logging.info('n_test_data = {}'.format(len(dataset)))
-        logging.info('labels of extracted test_data \n{}'.format(eval_dataset(dataset)))
-
-    return dataset
+    logging.info('Creating test_data with ratio = {:.0%}'.format(test_ratio))
+    test_data.start_indices = start_indices[split_idx:]
+    logging.info('n_test_data = {}'.format(len(test_data)))
+    logging.info('label-distribution of extracted test_data \n{}'.format(eval_dataset(test_data)))
+  
+    return train_data, test_data
 
 
 def eval_dataset(dataset):
@@ -254,7 +243,7 @@ def test(model, device, dataset, config):
                 metric.append(curr_metric.item())
 
         # Record overall statistics
-        stats_msg = "Performance of tmp1 on tmp2"
+        stats_msg = "Performance of {} on {}".format(config.get('model_name'), config.get('dataset'))
         confusion_mat = confusion_matrix(ground_truth, predicted, labels = list(range(config.get("num_classes"))))
         print(confusion_mat.shape)
         stats_msg = stats_msg + "\n\tAccuracy: {:.3f}".format(np.mean(metric))

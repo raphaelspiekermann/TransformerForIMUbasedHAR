@@ -2,28 +2,25 @@
     "path_to_home" : "C:/Users/Raphael/Desktop/BA_Code/TransformerForIMUbasedHAR/",
     "path_to_data" : "D:/Transformer_data/",
     "dataset" : "lara",
-	"load_data" : false,
-	"load_model" : "run_21_11_21_14_07_final.pth",
-
-    "mode" : "test",
+	"load_model" : "",
+    "mode" : "train_test",
+	"n_loops" : 3,
     "labeling_mode" : "middle",
     "normalize_data" : false,
     "window_size" : 50,
-    "step_size" : 0.2,
+    "step_size" : 0.25,
     "classification_type" : "classes",
 
 	"np_seed" : 42,
-	"test_size" : 0.1,
+	"test_size" : 0.15,
 
-    "n_freq_print": 20,
+    "n_freq_print": 50,
 	"n_freq_checkpoint": 3,
 	"n_workers": 4,
 	"device_id": "cuda:0",
 	
 	"task_type": "seq-to-one",
-	"input_dim": 30,
-	"num_classes":8,
-	"use_baseline": false,
+	"model_name": "transformer",
 	
 	"encode_position":true,
 	"transformer_dim": 64,
@@ -42,5 +39,5 @@
 	"eps": 1e-10,
 	"lr_scheduler_step_size": 5,
 	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 5
+	"n_epochs": 1
 }
