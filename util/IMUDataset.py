@@ -75,7 +75,7 @@ class IMUDataset(Dataset):
 
         labeling_mode = self.labeling_mode
         if labeling_mode == 'first': 
-            label = window_labels[0]
+            label = window_labels[0][0]
             
         if labeling_mode == 'middle':
             #TODO Remove last brackets

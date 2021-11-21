@@ -55,38 +55,55 @@ def main():
         if config.get('mode') == 'test':
             test(model, device, dataset, config)
         else:
-            logging.info('mode = {} does not exist'.format(config.get('mode')))
-            return
+            if config.get('mode') == 'train_test':
+                #TODO full walkthrough
+                pass
+            else:
+                raise 'mode = {} does not exist'.format(config.get('mode'))
+                
 
     #Exporting results
 
 #############
 def split_data(config):
-    test_ratio = config.get('test_size_ratio')
-    test_ratio = test_ratio if 0 < test_ratio < 1 else 0.1
-    
-    logging.info('Creating train_data with {:.0%} test_size_ratio'.format(test_ratio))
-    train_data = IMUDataset(config)
-    
-    logging.info('Creating train_data with {:.0%} train_size_ratio'.format(1-test_ratio))
-    test_data = IMUDataset(config)
-    
-    n = len(train_data)
+    test_size = config.get('test_size')
+    test_ratio = test_size if 0 < test_size <= 1 else 0.1
+    train_ratio = 1 - test_ratio
 
-    np.random.seed(config.get('np.seed'))
-    np.random.permutation(n)
+    dataset = IMUDataset(config)
+    logging.info('labels of orig dataset \n{}'.format(eval_dataset(dataset)))
 
-    limit_train_idx = int(n * test_ratio)
-    start_test_idx = limit_train_idx + 1
+    n = len(dataset)
+    split_idx = int(n * train_ratio)
 
-    train_data.start_indices = train_data.start_indices[:limit_train_idx]
-    test_data.start_indices = test_data.start_indices[start_test_idx:]
-    
-    logging.info('Train_data size = {}'.format(len(train_data)))
-    logging.info('Test_data size = {}'.format(len(test_data)))
+    np_seed = config.get('np_seed')
+    start_indices_permutation = np.random.RandomState(seed=np_seed).permutation(n)
+    start_indices = [dataset.start_indices[i] for i in start_indices_permutation]
 
-    return train_data if config.get('mode')=='train' else test_data
+    if config.get('mode')=='train':
+        logging.info('Creating train_data with ratio = {:.0%}'.format(train_ratio))
+        dataset.start_indices = start_indices[:split_idx] 
+        logging.info('n_train_data = {}'.format(len(dataset)))
+        logging.info('labels of extracted train_data \n{}'.format(eval_dataset(dataset)))
 
+    else:
+        logging.info('Creating test_data with ratio = {:.0%}'.format(test_ratio))
+        dataset.start_indices = start_indices[split_idx:]
+        logging.info('n_test_data = {}'.format(len(dataset)))
+        logging.info('labels of extracted test_data \n{}'.format(eval_dataset(dataset)))
+
+    return dataset
+
+
+def eval_dataset(dataset):
+    labels = [imu['label'] for imu in dataset]
+
+    lbl_set = set(labels)
+
+    lbl_count = {label : 0 for label in lbl_set}
+    for label in labels:
+        lbl_count[label] += 1 
+    return lbl_count
 
 
 def read_config():
@@ -97,12 +114,12 @@ def read_config():
     return config
 
 def load_checkpoint(model, path_to_data, file_name, device_id):
-    path_to_checkpoint = path_to_data + 'checkpoints/' + file_name
+    path_to_checkpoint = file_name if os.path.isfile(file_name) else path_to_data + 'checkpoints/' + file_name
     if os.path.isfile(path_to_checkpoint):
+        logging.info('Loading checkpoint from {}'.format(path_to_checkpoint))
         model.load_state_dict(torch.load(path_to_checkpoint, map_location=device_id))
     else:
-        print('[INFO] -- {} is no valid path to a checkpoint file'.format(path_to_checkpoint))
-        return
+        raise '[INFO] -- {} is no valid path to a checkpoint file'.format(path_to_checkpoint)
 
 def init_cuda(device_id_cfg):
     use_cuda = torch.cuda.is_available()
@@ -249,6 +266,10 @@ def test(model, device, dataset, config):
         utils.create_output_dir(config.get('path_to_data'), 'test_results')
         np.savez(join(config.get('path_to_data'), 'test_results/') + "_test_results_dump", confusion_mat = confusion_mat, accuracies = accuracies, count_per_label=count_per_label, total_acc = np.mean(metric))
         logging.info(stats_msg)
+
+        # Logging Results
+        logging.info('Count_per_label = {}'.format(count_per_label))
+        logging.info('Confusion-Matrix:\n{}'.format(confusion_mat))
 
 
 if __name__ == '__main__':
