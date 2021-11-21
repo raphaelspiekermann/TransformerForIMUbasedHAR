@@ -5,7 +5,7 @@
 	"load_data" : false,
 	"load_model" : "",
 
-    "mode" : "train",
+    "mode" : "test",
     "labeling_mode" : "middle",
     "normalize_data" : false,
     "window_size" : 100,
@@ -39,5 +39,5 @@
 	"eps": 1e-10,
 	"lr_scheduler_step_size": 5,
 	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 5
+	"n_epochs": 1
 }

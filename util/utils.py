@@ -22,31 +22,31 @@ def get_stamp_from_log():
     return split(logging.getLogger().handlers[0].baseFilename)[-1].replace(".log","")
 
 
-def create_output_dir(name):
+def create_output_dir(path, name):
     """
     Create a new directory for outputs, if it does not already exist
+    :param path: (str) path to root directory
     :param name: (str) the name of the directory
-    :return: the path to the outpur directory
+    :return: the path to the output directory
     """
-    out_dir = join(getcwd(), name)
+    out_dir = join(path, name)
     if not exists(out_dir):
         mkdir(out_dir)
     return out_dir
 
 
-def init_logger():
+def init_logger(path_to_home, path_to_data):
     """
     Initialize the logger and create a time stamp for the file
     """
-    path = split(realpath(__file__))[0]
 
-    with open(join(path, 'log_config.json')) as json_file:
+    with open(join(path_to_home, 'util/log_config.json')) as json_file:
         log_config_dict = json.load(json_file)
         filename = log_config_dict.get('handlers').get('file_handler').get('filename')
         filename = ''.join([filename, "_", time.strftime("%d_%m_%y_%H_%M", time.localtime()), ".log"])
 
         # Creating logs' folder is needed
-        log_path = create_output_dir('out')
+        log_path = create_output_dir(path_to_data, 'logs')
 
         log_config_dict.get('handlers').get('file_handler')['filename'] = join(log_path, filename)
         logging.config.dictConfig(log_config_dict)

@@ -10,7 +10,7 @@ class IMUDataset(Dataset):
         A class representing a dataset for IMU learning tasks
     """
     def __init__(self, config):
-        #initialisation variables
+        # Initialising variables
         path_to_input_data = config.get('path_to_data') + 'input/'
         features_path = path_to_input_data + 'features.csv'
         labels_path = path_to_input_data + 'labels.csv'
@@ -20,17 +20,30 @@ class IMUDataset(Dataset):
         labeling_mode = config.get('labeling_mode')
 
         super(IMUDataset, self).__init__()
-               
-        window_shift = min(window_shift, window_size)
+        # Setting window_shift
+        if window_shift > 0:
+            # Stepsize relative to window_size
+            if window_shift < 1:
+                window_shift = max(1, int(window_size * window_shift))
+            # Stepsize absolute
+            else:
+                window_shift = min(window_shift, window_size)
+        else:
+            logging.info('window_shift {} isnt valid'.format(window_shift))
+            raise 'window_shift {} isnt valid'.format(window_shift)
 
-        # Reading the dataset
-        print('[INFO] -- Reading {}'.format(features_path))
+        # Reading IMU-data
+        logging.info('Reading {}'.format(features_path))
         imu = pd.read_csv(features_path)
         self.imu = imu.iloc[:].values
-        print('[INFO] -- Reading {}'.format(labels_path))
+        
+        # Reading label-data
+        logging.info('Reading {}'.format(labels_path))
         labels = pd.read_csv(labels_path)
         self.labels = labels.iloc[:].values
-        print('[INFO] -- Reading {}'.format(infos_path))
+        
+        # Reading informations
+        logging.info('Reading {}'.format(infos_path))
         infos = pd.read_csv(infos_path)
         infos = infos.to_numpy()
 
@@ -40,7 +53,10 @@ class IMUDataset(Dataset):
         #Including only Windows that come from the same recording
         self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]),tmp_start_indices))
         
-        print('[INFO] -- {} windows were created from {} samples with a windowsize of {} and a stepsize of {}'.format(len(self.start_indices), n, window_size, window_shift))
+        logging.info('n_windows = {}'.format(len(self.start_indices)))
+        logging.info('n_samples = {}'.format(n))
+        logging.info('window_size = {}'.format(window_size))
+        logging.info('stepsize = {}'.format(window_shift))
 
         self.labeling_mode = labeling_mode
         self.window_size = window_size

@@ -2,7 +2,6 @@ import json
 from matplotlib.pyplot import subplots_adjust
 import torch
 import numpy as np
-import main
 import logging
 from util import utils
 import os
@@ -14,21 +13,14 @@ from util.IMUDataset import IMUDataset
 from sklearn.metrics import confusion_matrix
 
 
-def read_config():
-    __location__ = os.path.realpath(
-    os.path.join(os.getcwd(), os.path.dirname(__file__)))
-     # Read configuration
-    with open(os.path.join(__location__, 'config.json'), "r") as read_file:
-        config = json.load(read_file)
-    return config
 
 
 def main():
-    #Initializing Logger
-    utils.init_logger()
-    
     #Reading config
     config = read_config()
+
+    #Initializing Logger
+    utils.init_logger(config.get('path_to_home'), config.get('path_to_data'))
 
     #Loading data
     if config.get('load_data'):
@@ -38,7 +30,6 @@ def main():
         dataloader.load_data(path_to_data, loader_name, classification_type)
 
     #Preprocessing
-    #TODO
     if config.get('normalize_data'):
         pass
 
@@ -62,12 +53,19 @@ def main():
         if config.get('mode') == 'test':
             test(model, device, config)
         else:
-            print('mode = {} does not exist'.format(config.get('mode')))
+            logging.info('mode = {} does not exist'.format(config.get('mode')))
             return
 
     #Exporting results
 
 #############
+
+def read_config():
+    __location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+    with open(os.path.join(__location__, 'config.json'), "r") as read_file:
+        config = json.load(read_file)
+    return config
 
 def load_checkpoint(model, path_to_data, file_name, device_id):
     path_to_checkpoint = path_to_data + 'checkpoints/' + file_name
@@ -122,7 +120,7 @@ def train(model, device, config):
         n_epochs = config.get("n_epochs")
 
         # Train
-        checkpoint_prefix = join(utils.create_output_dir('out'),utils.get_stamp_from_log())
+        checkpoint_prefix = join(utils.create_output_dir(config.get('path_to_data'),'checkpoints'),utils.get_stamp_from_log())
         n_total_samples = 0.0
         loss_vals = []
         sample_count = []
@@ -179,9 +177,6 @@ def test(model, device, config):
 
         # Set the dataset and data loader
         logging.info("Start test data preparation")
-        window_shift = config.get("window_shift")
-        window_size = config.get("window_size")
-        input_size = config.get("input_dim")
         dataset = IMUDataset(config)
         loader_params = {'batch_size': 1,
                          'shuffle': False,
@@ -224,7 +219,8 @@ def test(model, device, config):
                 print("Performance for class [{}] - accuracy {:.3f}".format(i, accuracy_per_label[i]/count_per_label[i]))
                 accuracies.append(accuracy_per_label[i]/count_per_label[i])
         # save dump
-        np.savez('D:/Transformer_data/checkpoint/' + "_test_results_dump", confusion_mat = confusion_mat, accuracies = accuracies, count_per_label=count_per_label, total_acc = np.mean(metric))
+        utils.create_output_dir(config.get('path_to_data'), 'test_results')
+        np.savez(join(config.get('path_to_data'), 'test_results/') + "_test_results_dump", confusion_mat = confusion_mat, accuracies = accuracies, count_per_label=count_per_label, total_acc = np.mean(metric))
         logging.info(stats_msg)
 
 
