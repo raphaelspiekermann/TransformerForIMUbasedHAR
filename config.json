@@ -1,15 +1,13 @@
 {
-    "path_to_home" : "C:/Users/Raphael/Desktop/BA_Code/TransformerForIMUbasedHAR/",
     "path_to_data" : "D:/Transformer_data/",
     "dataset" : "lara",
+    "classification_type" : "classes",
 	"load_model" : "",
     "mode" : "train_test",
     "labeling_mode" : "middle",
     "normalize_data" : false,
     "window_size" : 50,
     "step_size" : 0.25,
-    "classification_type" : "classes",
-
 	"np_seed" : 42,
 	"test_size" : 0.15,
 

@@ -35,12 +35,12 @@ def create_output_dir(path, name):
     return out_dir
 
 
-def init_logger(path_to_home, path_to_data):
+def init_logger(path_to_data):
     """
     Initialize the logger and create a time stamp for the file
     """
-
-    with open(join(path_to_home, 'util/log_config.json')) as json_file:
+    path = split(realpath(__file__))[0]
+    with open(join(path, 'log_config.json')) as json_file:
         log_config_dict = json.load(json_file)
         filename = log_config_dict.get('handlers').get('file_handler').get('filename')
         filename = ''.join([filename, "_", time.strftime("%d_%m_%y_%H_%M", time.localtime()), ".log"])
