@@ -60,7 +60,7 @@ def init_dir_structure(path : str):
     parent_dir = split(path)[0]
     dir_name = split(path)[1]
 
-    create_dir(parent_dir, 'transformer_dir')
+    create_dir(parent_dir, dir_name)
     data_dir = join(parent_dir, dir_name)
     create_dir(data_dir, 'checkpoints')
     create_dir(data_dir, 'data')
