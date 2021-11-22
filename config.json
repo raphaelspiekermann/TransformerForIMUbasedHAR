@@ -4,7 +4,6 @@
     "dataset" : "lara",
 	"load_model" : "",
     "mode" : "train_test",
-	"n_loops" : 3,
     "labeling_mode" : "middle",
     "normalize_data" : false,
     "window_size" : 50,
@@ -14,7 +13,7 @@
 	"np_seed" : 42,
 	"test_size" : 0.15,
 
-    "n_freq_print": 50,
+    "n_freq_print": 100,
 	"n_freq_checkpoint": 3,
 	"n_workers": 4,
 	"device_id": "cuda:0",
@@ -39,5 +38,5 @@
 	"eps": 1e-10,
 	"lr_scheduler_step_size": 5,
 	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 1
+	"n_epochs": 15
 }

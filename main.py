@@ -45,9 +45,8 @@ def main():
             test(model, device, test_data, config)
         else:
             if config.get('mode') == 'train_test':
-                for _ in range(config.get('n_loops')):
-                    train(model, device, train_data, config)
-                    test(model, device, test_data, config)
+                train(model, device, train_data, config)
+                test(model, device, test_data, config)
 
             else:
                 raise 'mode = {} does not exist'.format(config.get('mode'))
@@ -187,7 +186,8 @@ def train(model, device, dataset, config):
                 optim.step()
 
                 # Record loss on train set
-                if batch_idx % n_freq_print == 0:
+                #if batch_idx % n_freq_print == 0:
+                if batch_idx == 0:
                     logging.info("[Batch-{}/Epoch-{}] batch loss: {:.3f}".format(
                                                                         batch_idx+1, epoch+1,
                                                                         batch_loss))
