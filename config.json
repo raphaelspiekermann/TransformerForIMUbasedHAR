@@ -3,6 +3,7 @@
     "dataset" : "lara",
     "classification_type" : "classes",
 	"load_model" : "",
+	"force_download" : false,
     "mode" : "train_test",
     "labeling_mode" : "middle",
     "normalize_data" : false,

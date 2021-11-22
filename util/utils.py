@@ -4,11 +4,14 @@ import PIL
 import json
 from os.path import join, exists, split, realpath, isfile
 import time
-from os import mkdir
+from os import mkdir, remove
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn.functional as F
+import urllib.request
+from tqdm import tqdm
+import zipfile
 
 # Logging and output utils
 ##########################
@@ -86,6 +89,28 @@ def init_cuda(device_id_cfg):
         device_id = device_id_cfg
     np.random.seed(numpy_seed)
     return torch.device(device_id), device_id
+
+
+class DownloadProgressBar(tqdm):
+    def update_to(self, b=1, bsize=1, tsize=None):
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
+def download_url(url, output_path, tmp_path=None, extract_archive=False):
+    logging.info('Downloading from {}'.format(url))
+    filename = tmp_path if extract_archive else output_path
+    with DownloadProgressBar(unit='B', unit_scale=True,
+                             miniters=1, desc=url.split('/')[-1]) as t:
+        tmp_path, _ = urllib.request.urlretrieve(url, filename, reporthook=t.update_to)
+    logging.info('File stored at {}'.format(filename))
+    if extract_archive:
+        logging.info('Extracting {} to {}'.format(tmp_path, output_path))
+        with zipfile.ZipFile(tmp_path) as myZip:
+            myZip.extractall(output_path)
+        remove(tmp_path)
+
 
 # Plotting utils
 ##########################

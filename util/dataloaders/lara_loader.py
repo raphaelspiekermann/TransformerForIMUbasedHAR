@@ -3,9 +3,11 @@ import os
 from os.path import join
 import numpy as np
 import pandas as pd
+from ..utils import download_url
+import shutil
 
 
-def load(path_to_data, classification_type='attributes'):
+def load(path_to_data, classification_type='attributes', force_download=False):
     
     load_attributes = classification_type == 'attributes'
     path = join(path_to_data, 'data', 'lara')
@@ -19,12 +21,14 @@ def load(path_to_data, classification_type='attributes'):
     labels = np.zeros((0, 19 if load_attributes else 1))
     infos = np.zeros((0, 2))
 
-    if not os.path.exists(path):
-        logging.info('lara_data not found under {} -> Downloading..'.format(path))
-        download_lara()
-        raise RuntimeError
+    if force_download or (not os.path.exists(path)):
+        if not os.path.exists(path): logging.info('lara_data not found under {}'.format(path))
+        if force_download: logging.info('forcing download')
+        if os.path.exists(path): shutil.rmtree(path)
+        download_url('https://zenodo.org/record/3862782/files/IMU%20data.zip?download=1', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
+        os.rename(join(path_to_data, 'data', 'IMU Data'), join(path_to_data, 'data', 'lara'))
 
-    print('[INFO] -- Loading data from {}.'.format(path))
+    logging.info('[INFO] -- Loading data from {}.'.format(path))
 
     for dir in directories:
         for sc in scenarios:
@@ -66,6 +70,3 @@ def load(path_to_data, classification_type='attributes'):
     logging.info('Writing infos.csv')
     infos.to_csv(join(path_input, 'infos.csv'), index=False, header=True)
 
-
-def download_lara():
-    pass 

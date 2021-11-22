@@ -107,6 +107,7 @@ class IMUDataset():
         self.window_size = config.get('window_size')
         self.window_shift = config.get('step_size')
         self.np_seed = config.get('np_seed')
+        self.force_download = config.get('force_download')
 
         #Loading data
         self.load_data()
@@ -134,16 +135,16 @@ class IMUDataset():
         if self.dataset not in ['motionsense', 'lara']:
             raise 'dataloader {} does not exist'.format(self.dataset)
 
-        if current_dataset==self.dataset and current_normalize==self.normalize_data and current_classification_type==self.classification_type:
+        if (not self.force_download) and current_dataset==self.dataset and current_normalize==self.normalize_data and current_classification_type==self.classification_type:
             logging.info('Data already loaded - nothing to do here')
         
         else:
             if self.dataset == 'motionsense':
-                motionsense_load(self.dir_path)
+                motionsense_load(self.dir_path, self.force_download)
                 dict_ = {'dataset':'motionsense', 'normalized':self.normalize_data, 'n_classes':6, 'n_dimension':6, 'classification_type':'classes'}
                 
             if self.dataset == 'lara':
-                lara_load(self.dir_path, self.classification_type)
+                lara_load(self.dir_path, self.classification_type, self.force_download)
                 dict_ = {'dataset':'lara', 'normalized':self.normalize_data, 'n_classes':8, 'n_dimension':30, 'classification_type':self.classification_type}
 
             if self.normalize_data:
