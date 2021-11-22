@@ -1,16 +1,14 @@
-# Forked from https://github.com/yolish/transposenet
 import logging
 import logging.config
 import PIL
 import json
-from os.path import join, exists, split, realpath
+from os.path import join, exists, split, realpath, isfile
 import time
-from os import mkdir, getcwd
+from os import mkdir
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn.functional as F
-from torchvision import transforms
 
 # Logging and output utils
 ##########################
@@ -22,7 +20,7 @@ def get_stamp_from_log():
     return split(logging.getLogger().handlers[0].baseFilename)[-1].replace(".log","")
 
 
-def create_output_dir(path, name):
+def create_dir(path, name):
     """
     Create a new directory for outputs, if it does not already exist
     :param path: (str) path to root directory
@@ -46,13 +44,48 @@ def init_logger(path_to_data):
         filename = ''.join([filename, "_", time.strftime("%d_%m_%y_%H_%M", time.localtime()), ".log"])
 
         # Creating logs' folder is needed
-        log_path = create_output_dir(path_to_data, 'logs')
+        log_path = join(path_to_data, 'logs')
 
         log_config_dict.get('handlers').get('file_handler')['filename'] = join(log_path, filename)
         logging.config.dictConfig(log_config_dict)
 
         # disable external modules' loggers (level warning and below)
         logging.getLogger(PIL.__name__).setLevel(logging.WARNING)
+
+
+def init_dir_structure(path : str):
+    parent_dir = split(path)[0]
+    dir_name = split(path)[1]
+
+    create_dir(parent_dir, 'transformer_dir')
+    data_dir = join(parent_dir, dir_name)
+    create_dir(data_dir, 'checkpoints')
+    create_dir(data_dir, 'data')
+    create_dir(data_dir, 'input')
+    create_dir(data_dir, 'logs')
+    create_dir(data_dir, 'test_results')
+
+def load_checkpoint(model, path_to_data, file_name, device_id):
+    path_to_checkpoint = file_name if isfile(file_name) else join(path_to_data, 'checkpoints/', file_name)
+    if isfile(path_to_checkpoint):
+        logging.info('Loading checkpoint from {}'.format(path_to_checkpoint))
+        model.load_state_dict(torch.load(path_to_checkpoint, map_location=device_id))
+    else:
+        raise '[INFO] -- {} is no valid path to a checkpoint file'.format(path_to_checkpoint)
+
+
+def init_cuda(device_id_cfg):
+    use_cuda = torch.cuda.is_available()
+    device_id = 'cpu'
+    torch_seed = 0
+    numpy_seed = 2
+    torch.manual_seed(torch_seed)
+    if use_cuda:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        device_id = device_id_cfg
+    np.random.seed(numpy_seed)
+    return torch.device(device_id), device_id
 
 # Plotting utils
 ##########################

@@ -1,9 +1,10 @@
 import json 
+from os.path import join
 from .IMUCLSBaseline import IMUCLSBaseline
 from .IMUTransformerEncoder import IMUTransformerEncoder
 
 def get_model(config):
-    path_meta_stuff = config.get('path_to_data') + 'input/meta_stuff.json'
+    path_meta_stuff = join(config.get('dir_path'), 'input/meta_stuff.json')
     with open(path_meta_stuff, "r") as read_file:
         meta_stuff = json.load(read_file)
 

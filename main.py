@@ -1,129 +1,51 @@
 import json
-from matplotlib.pyplot import subplots_adjust
 import torch
 import numpy as np
 import logging
 from util import utils
 import os
-import util.dataloader as dataloader
+from util.dataloader import IMUDataset
 from os.path import join
-from models.model import get_model
-from util.IMUDataset import IMUDataset
+import models.model as  model_loader
 from sklearn.metrics import confusion_matrix
+from sacred import Experiment
 
-def main():
-    #Reading config
-    config = read_config()
+#Reading config.json
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+with open(os.path.join(__location__, 'config.json'), "r") as read_file:
+    config = json.load(read_file)
+
+ex = Experiment("test_experiment")
+
+@ex.config
+def cfg():
+    ex.add_config(config)
+
+@ex.automain
+def run():
+    dir_path = config.get('dir_path')
+    #Initializing Directory
+    utils.init_dir_structure(dir_path)
 
     #Initializing Logger
-    utils.init_logger(config.get('path_to_data'))
-
-    #Loading data
-    path_to_data = config.get('path_to_data')
-    loader_name = config.get('dataset')
-    classification_type = config.get('classification_type')
-    dataloader.load_data(path_to_data, loader_name, classification_type) 
+    utils.init_logger(dir_path)
     
     #Initializing Cuda
-    device, device_id = init_cuda(config.get('device_id'))
+    device, device_id = utils.init_cuda(config.get('device_id'))
+
+    #Retreiving data
+    imu_dataset = IMUDataset(config)
 
     #Choosing Model
-    model = get_model(config).to(device)
+    model = model_loader.get_model(config).to(device)
 
     #Loading checkpoint if needed (Empty file name -> No Checkpoint will be loaded)
     if config.get('load_model') != '':
-        load_checkpoint(model, path_to_data, config.get('load_model'), device_id)
-    
-    #Loading Dataset
-    train_data, test_data = split_data(config)
+        utils.load_checkpoint(model, dir_path, config.get('load_model'), device_id)
 
     #Training/Evaluating Model
-    if config.get('mode') == 'train':
-        train(model, device, train_data, config)
-    else:
-        if config.get('mode') == 'test':
-            test(model, device, test_data, config)
-        else:
-            if config.get('mode') == 'train_test':
-                train(model, device, train_data, config)
-                test(model, device, test_data, config)
-
-            else:
-                raise 'mode = {} does not exist'.format(config.get('mode'))
-                
-    #Exporting results
-
-
-def split_data(config):
-    test_size = config.get('test_size')
-    test_ratio = test_size if 0 < test_size <= 1 else 0.1
-    train_ratio = 1 - test_ratio
-
-    train_data = IMUDataset(config)
-    test_data = IMUDataset(config, logging_active=False)
-    logging.info('label-distribution of original dataset \n{}'.format(eval_dataset(train_data)))
-
-    n = len(train_data)
-    split_idx = int(n * train_ratio)
-
-    np_seed = config.get('np_seed')
-    start_indices_permutation = np.random.RandomState(seed=np_seed).permutation(n)
-    start_indices = [train_data.start_indices[i] for i in start_indices_permutation]
-
-    logging.info('Creating train_data with ratio = {:.0%}'.format(train_ratio))
-    train_data.start_indices = start_indices[:split_idx] 
-    logging.info('n_train_data = {}'.format(len(train_data)))
-    logging.info('label-distribution of extracted train_data \n{}'.format(eval_dataset(train_data)))
-
-    logging.info('Creating test_data with ratio = {:.0%}'.format(test_ratio))
-    test_data.start_indices = start_indices[split_idx:]
-    logging.info('n_test_data = {}'.format(len(test_data)))
-    logging.info('label-distribution of extracted test_data \n{}'.format(eval_dataset(test_data)))
-  
-    return train_data, test_data
-
-
-def eval_dataset(dataset):
-    labels = [imu['label'] for imu in dataset]
-
-    lbl_set = set(labels)
-
-    lbl_count = {label : 0 for label in lbl_set}
-    for label in labels:
-        lbl_count[label] += 1 
-    return lbl_count
-
-
-def read_config():
-    __location__ = os.path.realpath(
-    os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    with open(os.path.join(__location__, 'config.json'), "r") as read_file:
-        config = json.load(read_file)
-    return config
-
-def load_checkpoint(model, path_to_data, file_name, device_id):
-    path_to_checkpoint = file_name if os.path.isfile(file_name) else path_to_data + 'checkpoints/' + file_name
-    if os.path.isfile(path_to_checkpoint):
-        logging.info('Loading checkpoint from {}'.format(path_to_checkpoint))
-        model.load_state_dict(torch.load(path_to_checkpoint, map_location=device_id))
-    else:
-        raise '[INFO] -- {} is no valid path to a checkpoint file'.format(path_to_checkpoint)
-
-def init_cuda(device_id_cfg):
-    use_cuda = torch.cuda.is_available()
-    device_id = 'cpu'
-    torch_seed = 0
-    numpy_seed = 2
-    torch.manual_seed(torch_seed)
-    if use_cuda:
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        device_id = device_id_cfg
-    np.random.seed(numpy_seed)
-    return torch.device(device_id), device_id
-
-def train(model, device, dataset, config):
-    # Set to train mode
+    if config.get('mode') == 'train' or config.get('mode') == 'train_test':
+        # Set to train mode
         model.train()
 
         # Set the loss
@@ -144,7 +66,7 @@ def train(model, device, dataset, config):
         loader_params = {'batch_size': config.get('batch_size'),
                                   'shuffle': True,
                                   'num_workers': config.get('n_workers')}
-        dataloader = torch.utils.data.DataLoader(dataset, **loader_params)
+        dataloader = torch.utils.data.DataLoader(imu_dataset.train_data, **loader_params)
         logging.info("Data preparation completed")
 
         # Get training details
@@ -153,7 +75,7 @@ def train(model, device, dataset, config):
         n_epochs = config.get("n_epochs")
 
         # Train
-        checkpoint_prefix = join(utils.create_output_dir(config.get('path_to_data'),'checkpoints'),utils.get_stamp_from_log())
+        checkpoint_prefix = join(utils.create_dir(config.get('dir_path'),'checkpoints'),utils.get_stamp_from_log())
         n_total_samples = 0.0
         loss_vals = []
         sample_count = []
@@ -201,12 +123,9 @@ def train(model, device, dataset, config):
         logging.info('Training completed')
         torch.save(model.state_dict(), checkpoint_prefix + '_final.pth'.format(epoch))
 
-        # Plot the loss function
-        #loss_fig_path = checkpoint_prefix + "_loss_fig.png"
-        #utils.plot_loss_func(sample_count, loss_vals, loss_fig_path)
 
-def test(model, device, dataset, config):
-    # Set to eval mode
+    if config.get('mode') == 'test' or config.get('mode') == 'train_test':
+        # Set to eval mode
         model.eval()
 
         # Set the dataset and data loader
@@ -214,7 +133,7 @@ def test(model, device, dataset, config):
         loader_params = {'batch_size': 1,
                          'shuffle': False,
                          'num_workers': config.get('n_workers')}
-        dataloader = torch.utils.data.DataLoader(dataset, **loader_params)
+        dataloader = torch.utils.data.DataLoader(imu_dataset.test_data, **loader_params)
         logging.info("Data preparation completed")
 
         metric = []
@@ -252,17 +171,16 @@ def test(model, device, dataset, config):
                 print("Performance for class [{}] - accuracy {:.3f}".format(i, accuracy_per_label[i]/count_per_label[i]))
                 accuracies.append(accuracy_per_label[i]/count_per_label[i])
         # save dump
-        utils.create_output_dir(config.get('path_to_data'), 'test_results')
-        np.savez(join(config.get('path_to_data'), 'test_results/') + "_test_results_dump", confusion_mat = confusion_mat, accuracies = accuracies, count_per_label=count_per_label, total_acc = np.mean(metric))
+        utils.create_dir(config.get('dir_path'), 'test_results')
+        np.savez(join(config.get('dir_path'), 'test_results/') + "_test_results_dump", confusion_mat = confusion_mat, accuracies = accuracies, count_per_label=count_per_label, total_acc = np.mean(metric))
         logging.info(stats_msg)
 
         # Logging Results
         logging.info('Count_per_label = {}'.format(count_per_label))
         logging.info('Confusion-Matrix:\n{}'.format(confusion_mat))
-
-
-if __name__ == '__main__':
-    main()
+    
+    #Exporting results
+    ex.log_scalar("test_scalar", 1337)
 
 
 

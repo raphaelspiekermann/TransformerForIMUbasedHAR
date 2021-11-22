@@ -1,4 +1,6 @@
-import os, os.path
+import logging
+import os
+from os.path import join
 import numpy as np
 import pandas as pd
 
@@ -6,7 +8,7 @@ import pandas as pd
 def load(path_to_data, classification_type='attributes'):
     
     load_attributes = classification_type == 'attributes'
-    path = path_to_data + 'data/lara/'
+    path = join(path_to_data, 'data', 'lara')
 
     directories = ['S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13', 'S14']
     scenarios = ['L{num:02d}'.format(num=x) for x in [1,2,3]]
@@ -17,13 +19,18 @@ def load(path_to_data, classification_type='attributes'):
     labels = np.zeros((0, 19 if load_attributes else 1))
     infos = np.zeros((0, 2))
 
+    if not os.path.exists(path):
+        logging.info('lara_data not found under {} -> Downloading..'.format(path))
+        download_lara()
+        raise RuntimeError
+
     print('[INFO] -- Loading data from {}.'.format(path))
 
     for dir in directories:
         for sc in scenarios:
             for rec in recordings:
-                path_features = path + dir + '/' + sc + '_' + dir + '_' + rec + '.csv'
-                path_labels = path + dir + '/' + sc + '_' + dir + '_' + rec + '_labels' + '.csv'
+                path_features = join(path, dir, sc + '_' + dir + '_' + rec + '.csv')
+                path_labels = join(path, dir, sc + '_' + dir + '_' + rec + '_labels' + '.csv')
 
                 if os.path.isfile(path_features) and os.path.isfile(path_labels):
                     raw_vals = pd.read_csv(path_features)
@@ -43,23 +50,22 @@ def load(path_to_data, classification_type='attributes'):
                     infos = np.append(infos, infs, axis=0)
 
     features = pd.DataFrame(data=features, columns=raw_vals.columns)
-    print(features.head())
-
     labels = pd.DataFrame(data=labels, columns=raw_lbls.columns)
-    print(labels.head())
-
     infos = pd.DataFrame(data=infos, columns=['person_id', 'recording_nr'])
-    print(infos.head())
 
-    path_input = path_to_data + 'input/'
+    path_input = join(path_to_data, 'input')
 
 
     # Exporting features, labels and infos as CSVs
-    print('[INFO] -- Writing features.csv')
-    features.to_csv(path_input + 'features.csv', index=False, header=True)
+    logging.info('Writing features.csv')
+    features.to_csv(join(path_input, 'features.csv'), index=False, header=True)
 
-    print('[INFO] -- Writing labels.csv')
-    labels.to_csv(path_input + 'labels.csv', index=False, header=True)
+    logging.info('Writing labels.csv')
+    labels.to_csv(join(path_input, 'labels.csv'), index=False, header=True)
 
-    print('[INFO] -- Writing infos.csv')
-    infos.to_csv(path_input + 'infos.csv', index=False, header=True)
+    logging.info('Writing infos.csv')
+    infos.to_csv(join(path_input, 'infos.csv'), index=False, header=True)
+
+
+def download_lara():
+    pass 

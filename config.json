@@ -1,5 +1,5 @@
 {
-    "path_to_data" : "D:/Transformer_data/",
+    "dir_path" : "D:\\transformer_dir",
     "dataset" : "lara",
     "classification_type" : "classes",
 	"load_model" : "",
@@ -14,9 +14,8 @@
     "n_freq_print": 100,
 	"n_freq_checkpoint": 3,
 	"n_workers": 4,
-	"device_id": "cuda:0",
 	
-	"task_type": "seq-to-one",
+	"device_id": "cuda:0",
 	"model_name": "transformer",
 	
 	"encode_position":true,
@@ -36,5 +35,5 @@
 	"eps": 1e-10,
 	"lr_scheduler_step_size": 5,
 	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 15
+	"n_epochs": 2
 }
