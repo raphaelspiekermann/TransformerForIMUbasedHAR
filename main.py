@@ -23,6 +23,7 @@ def cfg():
 
 @ex.automain
 def run():
+    ex.log_scalar('smth', 100)
     dir_path = config.get('dir_path')
     #Initializing Directory
     utils.init_dir_structure(dir_path)
@@ -70,7 +71,6 @@ def run():
         logging.info("Data preparation completed")
 
         # Get training details
-        n_freq_print = config.get("n_freq_print")
         n_freq_checkpoint = config.get("n_freq_checkpoint")
         n_epochs = config.get("n_epochs")
 
@@ -106,6 +106,7 @@ def run():
                 # Back prop
                 criterion.backward()
                 optim.step()
+
 
                 # Record loss on train set
                 #if batch_idx % n_freq_print == 0:
