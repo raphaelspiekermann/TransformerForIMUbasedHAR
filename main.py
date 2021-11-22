@@ -16,7 +16,7 @@ def main():
     config = read_config()
 
     #Initializing Logger
-    utils.init_logger(config.get('path_to_home'), config.get('path_to_data'))
+    utils.init_logger(config.get('path_to_data'))
 
     #Loading data
     path_to_data = config.get('path_to_data')
@@ -32,7 +32,7 @@ def main():
 
     #Loading checkpoint if needed (Empty file name -> No Checkpoint will be loaded)
     if config.get('load_model') != '':
-        load_checkpoint(model, config.get('path_to_data'), config.get('load_model'), device_id)
+        load_checkpoint(model, path_to_data, config.get('load_model'), device_id)
     
     #Loading Dataset
     train_data, test_data = split_data(config)
@@ -45,9 +45,8 @@ def main():
             test(model, device, test_data, config)
         else:
             if config.get('mode') == 'train_test':
-                for _ in range(config.get('n_loops')):
-                    train(model, device, train_data, config)
-                    test(model, device, test_data, config)
+                train(model, device, train_data, config)
+                test(model, device, test_data, config)
 
             else:
                 raise 'mode = {} does not exist'.format(config.get('mode'))
