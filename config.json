@@ -1,19 +1,19 @@
 {
     "dir_path" : "D:\\transformer_dir",
-    "dataset" : "lara",
+    "dataset" : "motionsense",
     "classification_type" : "classes",
-	"load_model" : "",
+	"load_model" : "run_23_11_21_11_45_checkpoint-3.pth",
 	"force_download" : false,
-    "mode" : "train_test",
-    "labeling_mode" : "middle",
+    "mode" : "test",
+    "labeling_mode" : "first",
     "normalize_data" : false,
     "window_size" : 50,
-    "step_size" : 0.25,
+    "step_size" : 0.1,
 	"np_seed" : 42,
 	"test_size" : 0.15,
 
 	"n_freq_checkpoint": 3,
-	"n_workers": 4,
+	"n_workers": 8,
 	
 	"device_id": "cuda:0",
 	"model_name": "transformer",
@@ -35,5 +35,5 @@
 	"eps": 1e-10,
 	"lr_scheduler_step_size": 5,
 	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 2
+	"n_epochs": 5
 }

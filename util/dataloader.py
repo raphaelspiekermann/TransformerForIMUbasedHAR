@@ -43,6 +43,9 @@ class _IMUDataset(Dataset):
             logging.info('Reading {}'.format(labels_path))
         labels = pd.read_csv(labels_path)
         self.labels = labels.iloc[:].values
+
+        # TODO Remove
+        print('labels.shape = {}'.format(self.labels.shape))
         
         # Reading informations
         if logging_active:
@@ -77,16 +80,16 @@ class _IMUDataset(Dataset):
         #Choosing label
 
         labeling_mode = self.labeling_mode
-        if labeling_mode == 'first': 
-            label = window_labels[0]
+        if labeling_mode == 'first':
+            label = window_labels[0][0]
             
         if labeling_mode == 'middle':
-            #TODO Remove last brackets
             label = window_labels[int(len(window_labels) / 2)][0]
             
         if labeling_mode ==  'last':
-            label = window_labels[-1]
-            
+            label = window_labels[-1][0]
+        
+        #TODO FIX Mode Calc
         if labeling_mode == 'mode':
             from scipy import stats
             label = stats.mode(window_labels)[0]
@@ -182,7 +185,6 @@ class IMUDataset():
         
         print("train_data_stuff = {} + {}".format(id(train_data.imu), id(train_data.start_indices)))
         print("test data stuff = {} + {}".format(id(train_data.imu), id(test_data.start_indices)))
-
 
 
         return train_data, test_data

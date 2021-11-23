@@ -30,7 +30,8 @@ def run():
 
     #Initializing Logger
     utils.init_logger(dir_path)
-    
+    logging.info(config)
+
     #Initializing Cuda
     device, device_id = utils.init_cuda(config.get('device_id'))
 
