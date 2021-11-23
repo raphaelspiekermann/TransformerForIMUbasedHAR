@@ -16,6 +16,7 @@ def load(path_to_data, classification_type='attributes', force_download=False):
     scenarios = ['L{num:02d}'.format(num=x) for x in [1,2,3]]
     recordings = ['R{num:02d}'.format(num=x) for x in range(1,31)]
 
+    label_dict = {'':0, '':1, '':2, '':3, '':4}
 
     features = np.zeros((0,30))
     labels = np.zeros((0, 19 if load_attributes else 1))
@@ -70,3 +71,4 @@ def load(path_to_data, classification_type='attributes', force_download=False):
     logging.info('Writing infos.csv')
     infos.to_csv(join(path_input, 'infos.csv'), index=False, header=True)
 
+    return label_dict
