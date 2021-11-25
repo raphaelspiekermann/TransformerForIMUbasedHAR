@@ -1,39 +1,54 @@
 {
-    "dir_path" : "C:\\Users\\Raphael\\Desktop\\transformer_data",
-    "dataset" : "lara",
-    "classification_type" : "classes",
-	"load_model" : "",
-	"force_download" : false,
-    "mode" : "",
-    "labeling_mode" : "middle",
-    "normalize_data" : true,
-    "window_size" : 50,
-    "step_size" : 0.1,
-	"np_seed" : 42,
-	"test_size" : 0.15,
-
-	"n_freq_checkpoint": 3,
-	"n_workers": 8,
-	
-	"device_id": "cuda:0",
-	"model_name": "transformer",
-	
-	"encode_position":true,
-	"transformer_dim": 64,
-	"nhead": 8,
-	"num_encoder_layers": 6, 
-	"num_decoder_layers": 6, 
-	"dim_feedforward": 128, 
-	"transformer_dropout": 0.1, 
-	"transformer_activation": "gelu",
-	"head_activation": "gelu",
-    "baseline_dropout": 0.1,
-	
-	"batch_size": 128,
-	"lr": 1e-4,
-	"weight_decay":1e-04,
-	"eps": 1e-10,
-	"lr_scheduler_step_size": 5,
-	"lr_scheduler_gamma": 0.5,
-	"n_epochs": 5
+	"settings": 
+	{
+		"mode": "train_test",
+		"model_name": "transformer",
+		"load_checkpoint": ""
+	},
+	"data":
+	{
+		"dataset": "motionsense",
+		"classification_type": "classes",
+		"labeling_mode":"middle",
+		"normalize_data": false,
+		"window_size": 100,
+		"window_shift": 0.1,
+		"test_size": 0.1,
+		"split_type": "person"
+	},
+    "model": 
+	{
+		"transformer": 
+		{
+			"encode_position": true,
+			"dim": 64,
+			"nhead": 8,
+			"num_encoder_layers": 6, 
+			"dim_feedforward": 128, 
+			"dropout": 0.1, 
+			"activation": "gelu"
+		},
+		"baseline":
+		{
+			"dropout": 0.1
+		}
+	},
+	"training":
+	{
+		"batch_size": 128,
+		"n_workers": 2,
+		"lr": 1e-4,
+		"weight_decay": 1e-04,
+		"eps": 1e-10,
+		"lr_scheduler_step_size": 5,
+		"lr_scheduler_gamma": 0.5,
+		"n_epochs": 10
+	},
+	"setup":
+	{
+		"n_freq_checkpoint": 3,
+		"dir_path": "D:\\transformer_dir",
+		"device_id": "cuda:0",
+		"np_seed": 42
+	}
 }

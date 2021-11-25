@@ -19,10 +19,8 @@ def load(path_to_data, force_download=False):
     labels = np.zeros((0, 1))
     infos = np.zeros((0, 2))
 
-    if force_download or (not exists(path)):
-        if not exists(path): logging.info('motionsense_data not found under {}'.format(path))
-        if force_download: logging.info('forcing download')
-        if exists(path): shutil.rmtree(path)
+    if not exists(path):
+        logging.info('motionsense_data not found under {}'.format(path))
         download_url('https://github.com/mmalekzadeh/motion-sense/raw/master/data/A_DeviceMotion_data.zip', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
         os.rename(join(path_to_data, 'data', 'A_DeviceMotion_data'), join(path_to_data, 'data', 'motionsense'))
         if exists(join(path_to_data, 'data', '__MACOSX')): shutil.rmtree(join(path_to_data, 'data', '__MACOSX'))
@@ -38,14 +36,6 @@ def load(path_to_data, force_download=False):
                 if isfile(path_to_csv):
                     dataset = pd.read_csv(path_to_csv) 
                     raw_features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'attitude.roll', 'attitude.pitch', 'attitude.yaw']]
-                    raw_features = raw_features.rename(columns={
-                        'userAcceleration.x' : 'acc.x', 
-                        'userAcceleration.y' : 'acc.y',
-                        'userAcceleration.z' : 'acc.z', 
-                        'attitude.roll' : 'att.roll',
-                        'attitude.pitch' : 'att.pitch',
-                        'attitude.yaw' : 'att.yaw',
-                        })
 
                     lbls = np.zeros((len(raw_features), 1))
                     lbls[:,0] = lbl_dict[dir]
@@ -58,22 +48,4 @@ def load(path_to_data, force_download=False):
                     labels = np.append(labels, lbls, axis=0)
                     infos = np.append(infos, infs, axis=0)
 
-    assert features.shape[0] == labels.shape[0] == infos.shape[0]
-
-    features = pd.DataFrame(data=features, columns=raw_features.columns)
-    labels = pd.DataFrame(data=labels, columns=['class'])
-    infos = pd.DataFrame(data=infos, columns=['person_id', 'recording_nr'])
-
-    path_input = join(path_to_data, 'input')
-
-    # Exporting features, labels and infos as CSVs
-    logging.info('Writing features.csv')
-    features.to_csv(join(path_input, 'features.csv'), index=False, header=True)
-
-    logging.info('Writing labels.csv')
-    labels.to_csv(join(path_input, 'labels.csv'), index=False, header=True)
-
-    logging.info('Writing infos.csv')
-    infos.to_csv(join(path_input, 'infos.csv'), index=False, header=True)
-
-    return lbl_dict
+    return features, labels, infos, {v: k for k, v in lbl_dict.items()}
