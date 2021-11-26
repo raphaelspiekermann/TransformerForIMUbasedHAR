@@ -15,9 +15,9 @@ def load(path_to_data, force_download=False):
 
     path = join(path_to_data, 'data', 'motionsense')
 
-    features = np.zeros((0, 6))
-    labels = np.zeros((0, 1))
-    infos = np.zeros((0, 2))
+    features = np.zeros((0, 6), dtype=np.float32)
+    labels = np.zeros((0, 1), dtype=np.int16)
+    infos = np.zeros((0, 2), dtype=np.int16)
 
     if not exists(path):
         logging.info('motionsense_data not found under {}'.format(path))

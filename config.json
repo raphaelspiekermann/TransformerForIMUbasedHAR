@@ -3,17 +3,19 @@
 	{
 		"mode": "train_test",
 		"model_name": "transformer",
-		"load_checkpoint": ""
+		"load_checkpoint": "",
+		"attr_prediction_type": "nn"
 	},
 	"data":
 	{
-		"dataset": "motionsense",
+		"dataset": "orderpicking",
 		"classification_type": "classes",
+		"one_hot_encoding":false,
 		"labeling_mode":"middle",
-		"normalize_data": false,
+		"normalize": "none",
 		"window_size": 100,
-		"window_shift": 0.1,
-		"test_size": 0.1,
+		"window_shift": 0.5,
+		"test_size": 0.05,
 		"split_type": "person"
 	},
     "model": 
@@ -30,13 +32,15 @@
 		},
 		"baseline":
 		{
+			"dim": 64,
 			"dropout": 0.1
 		}
 	},
 	"training":
 	{
 		"batch_size": 128,
-		"n_workers": 2,
+		"n_workers": 4,
+		"n_freq_print": 1,
 		"lr": 1e-4,
 		"weight_decay": 1e-04,
 		"eps": 1e-10,

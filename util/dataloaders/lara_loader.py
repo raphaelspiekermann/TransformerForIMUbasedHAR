@@ -16,13 +16,13 @@ def load(path_to_data, classification_type='attributes'):
     recordings = ['R{num:02d}'.format(num=x) for x in range(1,31)]
     if load_attributes:
         # TODO attribute 
-        label_dict = {}
+        label_dict = None
     else:
         label_dict = {0:'Standing', 1:'Walking', 2:'Cart', 3:'Handling(up)', 4:'Handling(ctr)', 5:'Handling(down)', 6:'Synchronization', 7:'None'} 
 
-    features = np.zeros((0,30))
-    labels = np.zeros((0, 19 if load_attributes else 1))
-    infos = np.zeros((0, 2))
+    features = np.zeros((0,30), dtype=np.float32)
+    labels = np.zeros((0, 19 if load_attributes else 1), dtype=np.int16)
+    infos = np.zeros((0, 2), dtype=np.int16)
 
     if not os.path.exists(path):
         logging.info('lara_data not found under {}'.format(path))

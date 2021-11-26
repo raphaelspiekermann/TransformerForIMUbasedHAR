@@ -8,7 +8,6 @@ from os import mkdir, remove
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-import torch.nn.functional as F
 import urllib.request
 from tqdm import tqdm
 import zipfile
@@ -59,14 +58,13 @@ def init_logger(path_to_data):
 def init_dir_structure(path : str):
     parent_dir = split(path)[0]
     dir_name = split(path)[1]
-
     create_dir(parent_dir, dir_name)
     data_dir = join(parent_dir, dir_name)
     create_dir(data_dir, 'checkpoints')
-    create_dir(data_dir, 'data')
-    create_dir(data_dir, 'input')
+    create_dir(data_dir, 'data') 
     create_dir(data_dir, 'logs')
     create_dir(data_dir, 'test_results')
+    
 
 def load_checkpoint(model, path_to_data, file_name, device_id):
     path_to_checkpoint = file_name if isfile(file_name) else join(path_to_data, 'checkpoints/', file_name)

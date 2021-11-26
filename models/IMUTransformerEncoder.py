@@ -16,7 +16,7 @@ class IMUTransformerEncoder(nn.Module):
         super().__init__()
 
         self.transformer_dim = transformer_config.get("dim")
-
+        
         self.output_size = output_size
 
         self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU(),
@@ -60,6 +60,7 @@ class IMUTransformerEncoder(nn.Module):
 
         self.log_softmax = nn.LogSoftmax(dim=1) 
         self.sigmoid = nn.Sigmoid()
+        self.n_classes = n_classes
 
         # init
         for p in self.parameters():
@@ -85,5 +86,6 @@ class IMUTransformerEncoder(nn.Module):
         target = self.transformer_encoder(src)[0]
    
         # Class probability
-        target = self.log_softmax(self.imu_head(target)) if self.output_size == 1 else self.sigmoid(self.imu_head(target))
+        #TODO one-hot-encoding schöner einbauen wenn Zeit dafür
+        target = self.log_softmax(self.imu_head(target)) if self.output_size in [1, self.n_classes] else self.sigmoid(self.imu_head(target))
         return target

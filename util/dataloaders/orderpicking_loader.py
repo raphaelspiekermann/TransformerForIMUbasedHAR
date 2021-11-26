@@ -42,8 +42,8 @@ def load(path_to_data):
         except:
             raise RuntimeError ('file_name {} not found!'.format(pth))
 
-    values = np.array(values)
-    labels = np.array(labels)
-    infos = np.array(infos)
+    values = np.array(values, dtype=np.float32)
+    labels = np.array(labels, dtype=np.int16)
+    infos = np.array(infos, dtype=np.int16)
 
     return values, labels, infos, label_dict
