@@ -15,9 +15,9 @@ def load(path_to_data, force_download=False):
 
     path = join(path_to_data, 'data', 'motionsense')
 
-    features = np.zeros((0, 6), dtype=np.float32)
-    labels = np.zeros((0, 1), dtype=np.int16)
-    infos = np.zeros((0, 2), dtype=np.int16)
+    features = np.zeros((0, 6), dtype=np.float64)
+    labels = np.zeros((0, 1), dtype=np.int64)
+    infos = np.zeros((0, 2), dtype=np.int64)
 
     if not exists(path):
         logging.info('motionsense_data not found under {}'.format(path))
@@ -25,7 +25,7 @@ def load(path_to_data, force_download=False):
         os.rename(join(path_to_data, 'data', 'A_DeviceMotion_data'), join(path_to_data, 'data', 'motionsense'))
         if exists(join(path_to_data, 'data', '__MACOSX')): shutil.rmtree(join(path_to_data, 'data', '__MACOSX'))
 
-    logging.info('[INFO] -- Loading data from {}.'.format(path))
+    logging.info('Loading data from {}.'.format(path))
 
     for dir in lbl_dirs:
         for rec in recordings:
@@ -40,7 +40,7 @@ def load(path_to_data, force_download=False):
                     lbls = np.zeros((len(raw_features), 1))
                     lbls[:,0] = lbl_dict[dir]
 
-                    infs = np.zeros((len(raw_features), 2))
+                    infs = np.zeros((len(raw_features), 2), dtype=np.int64)
                     infs[:,0] = sub
                     infs[:,1] = rec
 

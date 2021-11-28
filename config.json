@@ -4,19 +4,21 @@
 		"mode": "train_test",
 		"model_name": "transformer",
 		"load_checkpoint": "",
+		"load_training_settings": true,
 		"attr_prediction_type": "nn"
 	},
 	"data":
 	{
-		"dataset": "orderpicking",
+		"dataset": "motionsense",
 		"classification_type": "classes",
-		"one_hot_encoding":false,
+		"one_hot_encoding": false,
 		"labeling_mode":"middle",
-		"normalize": "none",
+		"normalize": "min_max",
 		"window_size": 100,
 		"window_shift": 0.5,
-		"test_size": 0.05,
-		"split_type": "person"
+		"test_size": 0.2,
+		"split_type": "person",
+		"np_seed": 42
 	},
     "model": 
 	{
@@ -40,9 +42,8 @@
 	{
 		"batch_size": 128,
 		"n_workers": 4,
-		"n_freq_print": 1,
 		"lr": 1e-4,
-		"weight_decay": 1e-04,
+		"weight_decay": 1e-4,
 		"eps": 1e-10,
 		"lr_scheduler_step_size": 5,
 		"lr_scheduler_gamma": 0.5,
@@ -50,9 +51,8 @@
 	},
 	"setup":
 	{
-		"n_freq_checkpoint": 3,
+		"n_freq_checkpoint": 5,
 		"dir_path": "D:\\transformer_dir",
-		"device_id": "cuda:0",
-		"np_seed": 42
+		"device_id": "cuda:0"
 	}
 }

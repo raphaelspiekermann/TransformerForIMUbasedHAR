@@ -15,21 +15,20 @@ def load(path_to_data, classification_type='attributes'):
     scenarios = ['L{num:02d}'.format(num=x) for x in [1,2,3]]
     recordings = ['R{num:02d}'.format(num=x) for x in range(1,31)]
     if load_attributes:
-        # TODO attribute 
         label_dict = None
     else:
         label_dict = {0:'Standing', 1:'Walking', 2:'Cart', 3:'Handling(up)', 4:'Handling(ctr)', 5:'Handling(down)', 6:'Synchronization', 7:'None'} 
 
-    features = np.zeros((0,30), dtype=np.float32)
-    labels = np.zeros((0, 19 if load_attributes else 1), dtype=np.int16)
-    infos = np.zeros((0, 2), dtype=np.int16)
+    features = np.zeros((0,30), dtype=np.float64)
+    labels = np.zeros((0, 19 if load_attributes else 1), dtype=np.int64)
+    infos = np.zeros((0, 2), dtype=np.int64)
 
     if not os.path.exists(path):
         logging.info('lara_data not found under {}'.format(path))
         download_url('https://zenodo.org/record/3862782/files/IMU%20data.zip?download=1', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
         os.rename(join(path_to_data, 'data', 'IMU Data'), join(path_to_data, 'data', 'lara'))
 
-    logging.info('[INFO] -- Loading data from {}.'.format(path))
+    logging.info('Loading data from {}.'.format(path))
 
     for dir in directories:
         for sc in scenarios:
@@ -46,7 +45,7 @@ def load(path_to_data, classification_type='attributes'):
 
                     assert len(raw_lbls) == len(raw_vals)
 
-                    infs = np.zeros((len(raw_lbls), 2))
+                    infs = np.zeros((len(raw_lbls), 2), dtype=np.int64)
                     infs[:,0] = int(dir[1:3])
                     infs[:,1] = int(rec[1:3])
 

@@ -18,6 +18,7 @@ class IMUCLSBaseline(nn.Module):
         self.fc1 = nn.Linear(window_size*(feature_dim//2), feature_dim, nn.ReLU())
         self.fc2 = nn.Linear(feature_dim,  n_classes) if output_size == 1 else nn.Linear(feature_dim, output_size)
         self.log_softmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
         self.n_classes = n_classes
 
@@ -25,6 +26,9 @@ class IMUCLSBaseline(nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
+    
+    def __str__(self):
+        return 'IMUCLSBaseline'
 
     def forward(self, data):
         """
@@ -32,12 +36,18 @@ class IMUCLSBaseline(nn.Module):
         :param x:  B X M x T tensor reprensting a batch of size B of  M sensors (measurements) X T time steps (e.g. 128 x 6 x 100)
         :return: B X N weight for each mode per sample
         """
-        x = data.get('imu').transpose(1, 2)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.dropout(x)
-        x = self.maxpool(x) # return B X C/2 x M
-        x = x.view(x.size(0), -1) # B X C/2*M
-        x = self.fc1(x)
-        x = self.log_softmax(self.fc2(x)) if self.output_size in [1, self.n_classes] else self.sigmoid(self.fc2(x))
-        return x # B X N
+        target = data.get('imu').transpose(1, 2)
+        target = self.conv1(target)
+        target = self.conv2(target)
+        target = self.dropout(target)
+        target = self.maxpool(target) # return B X C/2 x M
+        target = target.view(target.size(0), -1) # B X C/2*M
+        target = self.fc1(target)
+        target = self.fc2(target)
+        if self.output_size == 1:
+            return self.log_softmax(target)
+        else:
+            if self.output_size == self.n_classes:
+                return self.softmax(target)
+            else:
+                return self.sigmoid(target)

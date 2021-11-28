@@ -59,6 +59,7 @@ class IMUTransformerEncoder(nn.Module):
 
 
         self.log_softmax = nn.LogSoftmax(dim=1) 
+        self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
         self.n_classes = n_classes
 
@@ -66,6 +67,9 @@ class IMUTransformerEncoder(nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
+
+    def __str__(self):
+        return 'transformer_encoder'
 
     def forward(self, data):
         src = data.get('imu')  # Shape N x S x C with S = sequence length, N = batch size, C = channels
@@ -86,6 +90,11 @@ class IMUTransformerEncoder(nn.Module):
         target = self.transformer_encoder(src)[0]
    
         # Class probability
-        #TODO one-hot-encoding schöner einbauen wenn Zeit dafür
-        target = self.log_softmax(self.imu_head(target)) if self.output_size in [1, self.n_classes] else self.sigmoid(self.imu_head(target))
-        return target
+        if self.output_size == 1:
+            return self.log_softmax(self.imu_head(target))
+        else:
+            if self.output_size == self.n_classes:
+                return self.softmax(self.imu_head(target))
+            else:
+                return self.sigmoid(self.imu_head(target))
+        

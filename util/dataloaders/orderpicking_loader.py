@@ -23,7 +23,7 @@ def load(path_to_data):
         download_url('https://drive.google.com/u/0/uc?id=171juakdAdoNcA252IMzMp2Fj8gLlwRhn&export=download', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
         os.rename(join(path_to_data, 'data', 'Order_Picking_Dataset'), join(path_to_data, 'data', 'orderpicking'))
 
-    logging.info('[INFO] -- Loading data from {}.'.format(path))
+    logging.info('Loading data from {}.'.format(path))
     
     values = []
     labels = []
@@ -42,8 +42,8 @@ def load(path_to_data):
         except:
             raise RuntimeError ('file_name {} not found!'.format(pth))
 
-    values = np.array(values, dtype=np.float32)
-    labels = np.array(labels, dtype=np.int16)
-    infos = np.array(infos, dtype=np.int16)
+    values = np.array(values, dtype=np.float64)
+    labels = np.array(labels, dtype=np.int64)
+    infos = np.array(infos, dtype=np.int64)
 
     return values, labels, infos, label_dict
