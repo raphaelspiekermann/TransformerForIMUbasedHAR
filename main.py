@@ -12,6 +12,7 @@ from sklearn.metrics import classification_report, accuracy_score, confusion_mat
 import sklearn.metrics
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def run():
@@ -31,6 +32,7 @@ def run():
     
     #Initializing Cuda
     device, device_id = utils.init_cuda(config.get('setup').get('device_id'))
+    logging.info('device_id = {}'.format(device_id))
 
     #Loading checkpoint if needed (Empty file name -> No Checkpoint will be loaded)
     if config.get('settings').get('load_checkpoint') != '':
@@ -46,8 +48,8 @@ def run():
 
     #Retreiving datasets
     train_data, test_data, label_dict = get_data(dir_path, config.get('data').get('np_seed'), config.get('data'))
-    logging.info('len(train_data) = {}'.format(len(train_data)))
-    logging.info('len(test_data) = {}'.format(len(test_data)))
+    logging.info('Elements in train_data = {}'.format(len(train_data)))
+    logging.info('Elements in test_data = {}'.format(len(test_data)))
 
     #Choosing Model
     model_name_ = config.get('settings').get('model_name')
@@ -112,7 +114,7 @@ def run():
         loss_stats = []
         # Train
         logging.info("Start training")
-        for epoch in range(start_epoch, n_epochs):
+        for epoch in tqdm(range(start_epoch, n_epochs)):
             # Making the sampling deterministic
             torch.random.manual_seed(epoch)
             loss_acc = []

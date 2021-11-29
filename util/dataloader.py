@@ -32,6 +32,7 @@ class IMUDataset(Dataset):
         logging.info('n_windows = {}'.format(len(self.start_indices)))
         logging.info('window_size = {}'.format(window_size))
         logging.info('stepsize = {}'.format(window_shift))
+        logging.info('labeling_mode = {}'.format(labeling_mode))
 
         self.imu = normalize_data(features, normalize)
         self.labels = labels
@@ -69,6 +70,9 @@ class IMUDataset(Dataset):
 
 
 def normalize_data(data, normalize):
+    if normalize == '':
+        normalize = 'None'
+    logging.info('Normalization = {}'.format(normalize))
     if normalize == 'average':
         logging.info('Average-Normalizing of imu-data')
         avg = np.average(data, axis=0)
@@ -156,8 +160,9 @@ def get_data(dir_path, np_seed=42, data_config=None):
     classification_type = data_config.get('classification_type')
     features, labels, infos, label_dict = load_data(dir_path, dataset, classification_type)
 
-    logging.info('label_dict = {}'.format(label_dict))
-    logging.info('N_features = {}'.format(features.shape[0]))
+    #logging.info('label_dict = {}'.format(label_dict))
+    #logging.info('N_features = {}'.format(features.shape[0]))
+    logging.info('classification_type = {}'.format(classification_type))
 
     # Preprocessing
     if labels.ndim == 2 and labels.shape[1] == 1:
@@ -165,11 +170,13 @@ def get_data(dir_path, np_seed=42, data_config=None):
 
     if classification_type == 'classes':
         features, labels, infos, label_dict = preprocessing(features, labels, infos, label_dict)
-        logging.info('label_dict after preprocessing = {}'.format(label_dict))
-        logging.info('N_features after preprocessing = {}'.format(features.shape[0]))
+    
+    logging.info('label_dict = {}'.format(label_dict))
+    logging.info('One_hot_encoding = {}'.format(data_config.get('one_hot_encoding')))
 
     if data_config.get('one_hot_encoding'):
         labels = one_hot_encoding(labels, len(label_dict))
+
 
     # Creating the IMU-Dataset
     window_size = data_config.get('window_size')
