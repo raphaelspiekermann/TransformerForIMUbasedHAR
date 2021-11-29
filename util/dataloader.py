@@ -150,7 +150,7 @@ def load_data(dir_path, dataset, classification_type):
     raise 'dataloader {} does not exist'.format(dataset)
 
 
-def get_data(dir_path, np_seed, data_config):
+def get_data(dir_path, np_seed=42, data_config=None):
     # Loading data from disc
     dataset = data_config.get('dataset')
     classification_type = data_config.get('classification_type')

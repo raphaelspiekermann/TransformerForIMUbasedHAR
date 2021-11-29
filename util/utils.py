@@ -136,7 +136,7 @@ def download_url(url, output_path, tmp_path=None, extract_archive=False):
 
 # Plotting utils
 ##########################
-def create_heatmap(real_labels, pred_labels, labels, label_dict=None, file_name=None , normalize=True):
+def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None, file_name=None , normalize=True):
 
     if label_dict != None:
         real_labels = [label_dict[label] for label in real_labels]
@@ -164,6 +164,9 @@ def create_heatmap(real_labels, pred_labels, labels, label_dict=None, file_name=
     plt.xlabel("Predicted Labels",rotation=0, fontsize=22)
     plt.ylabel("Real Labels", rotation=90, fontsize=22)
     
+    
+    ax.set_title(title, fontsize=24)
+
     if file_name != None:
         plt.savefig(file_name)
 

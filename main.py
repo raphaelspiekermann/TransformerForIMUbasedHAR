@@ -9,6 +9,7 @@ from util.dataloader import get_data, load_data
 from os.path import join, isfile
 import models.model as  model_loader
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+import sklearn.metrics
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
 
@@ -212,7 +213,13 @@ def run():
         classifications = np.array([ground_truth, predicted], dtype=np.int64)
         np.save(filename_prefix + '_classifications.npy', classifications)
 
-    #eval_run(run_name, dir_path)
+    # saving config
+    with open(join(filename_prefix + '_config.json'), "w") as f:
+        json.dump(config, f, indent=4)
+
+    # evaluation
+    if config.get('settings').get('mode') in ['train', 'train_test']:
+        eval_run(run_name, dir_path)
 
 
 def pred_attribute(arr, pred_type, attr_combinations=None):
@@ -230,11 +237,16 @@ def eval_run(run_name, dir_path):
     logging.disable(logging.CRITICAL)
     dir_run = join(dir_path, 'runs', run_name)
     model_dict, optim_dict, scheduler_dict, epoch, loss, config = utils.load_checkpoint(dir_path, run_name + '_checkpoint-final')
-    
+
+    # Modify data_config for loading whole dataset
+    data_cfg = config.get('data')
+    data_cfg['split_type'] = ''
+
+    # Load dataset
+    dataset, label_dict = get_data(dir_path, data_config=config.get('data'))
+    labels = dataset.labels
+
     # Stats about the dataset
-    dataset = config.get('data').get('dataset')
-    classification_type = config.get('data').get('classification_type')
-    features, labels, infos, label_dict = load_data(dir_path, dataset, classification_type)
 
     # Stats about the setup
 
@@ -248,11 +260,11 @@ def eval_run(run_name, dir_path):
         loss_prog = np.load(loss_file) 
         loss_prog_avg = np.average(loss_prog, axis=1)
         loss_prog_std = np.std(loss_prog, axis=1)
-        n, m = (loss_prog.shape[0], loss_prog.shape[1])
+        n_epochs, n_batches = (loss_prog.shape[0], loss_prog.shape[1])
 
-        x_vals_1 = np.array(range(0, n*m, 1)) / m
-        x_vals_2 = np.array(range(0, n*m, m)) / m
-
+        x_vals_1 = np.array(range(n_epochs * n_batches)) / n_batches
+        x_vals_2 = np.array(range(1, n_epochs+1))
+        
         plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
         plt.plot(x_vals_2, loss_prog_avg, label = 'avg_batch_loss')
         plt.plot(x_vals_2, loss_prog_std, label = 'std_batch_loss')
@@ -273,16 +285,12 @@ def eval_run(run_name, dir_path):
             class_names = [label_dict[c] for c in classes]
             report = classification_report(y_true=classifications[0, :], y_pred=classifications[1, :], labels=classes, target_names=class_names, zero_division=0, digits=2)
             matr = confusion_matrix(y_true=classifications[0, :], y_pred=classifications[1, :], labels=classes)
-            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, join(dir_run, 'classification_heatmap.pdf'), True)
-            
-
+            acc = sklearn.metrics.accuracy_score(y_true=classifications[0, :], y_pred=classifications[1, :])
+            f1 = sklearn.metrics.f1_score(y_true=classifications[0, :], y_pred=classifications[1, :], average='weighted')
+            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'wAcc = {:.3f}   |   wF1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
+    
     logging.disable(logging.DEBUG)
 
-
-
-
-    return -1
-
 if __name__ == '__main__':
-    #run()
-    eval_run('28_11_21_16_48_48', 'D:\\transformer_dir')
+    run()
+    #eval_run('28_11_21_16_48_48', 'D:\\transformer_dir')
