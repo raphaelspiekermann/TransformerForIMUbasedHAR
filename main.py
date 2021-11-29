@@ -14,6 +14,7 @@ from scipy.spatial import distance
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+import torch.multiprocessing
 
 def run():
     #Reading config.json
@@ -32,6 +33,7 @@ def run():
     
     #Initializing Cuda
     device, device_id = utils.init_cuda(config.get('setup').get('device_id'))
+    torch.multiprocessing.set_sharing_strategy('file_system')
     logging.info('device_id = {}'.format(device_id))
 
     #Loading checkpoint if needed (Empty file name -> No Checkpoint will be loaded)
