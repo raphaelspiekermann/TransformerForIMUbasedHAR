@@ -116,7 +116,7 @@ def run():
         loss_stats = []
         # Train
         logging.info("Start training")
-        for epoch in tqdm(range(start_epoch, n_epochs)):
+        for epoch in range(start_epoch, n_epochs):
             # Making the sampling deterministic
             torch.random.manual_seed(epoch)
             loss_acc = []
@@ -267,7 +267,7 @@ def eval_run(run_name, dir_path):
         n_epochs, n_batches = (loss_prog.shape[0], loss_prog.shape[1])
 
         x_vals_1 = np.array(range(n_epochs * n_batches)) / n_batches
-        x_vals_2 = np.array(range(1, n_epochs+1))
+        x_vals_2 = np.array(range(1, n_epochs+1)) - .5
         
         plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
         plt.plot(x_vals_2, loss_prog_avg, label = 'avg_batch_loss')
