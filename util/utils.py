@@ -158,14 +158,14 @@ def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None
     if normalize:
         for t in ax.texts: t.set_text(t.get_text() + "%")
     
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=0, fontsize=18)
-    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=18)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=0, fontsize=16)
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=16)
     
     plt.xlabel("Predicted Labels",rotation=0, fontsize=22)
     plt.ylabel("Real Labels", rotation=90, fontsize=22)
     
     
-    ax.set_title(title, fontsize=24)
+    ax.set_title(title, fontsize=22)
 
     if file_name != None:
         plt.savefig(file_name)

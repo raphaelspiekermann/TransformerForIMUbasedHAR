@@ -287,7 +287,7 @@ def eval_run(run_name, dir_path):
             matr = confusion_matrix(y_true=classifications[0, :], y_pred=classifications[1, :], labels=classes)
             acc = sklearn.metrics.accuracy_score(y_true=classifications[0, :], y_pred=classifications[1, :])
             f1 = sklearn.metrics.f1_score(y_true=classifications[0, :], y_pred=classifications[1, :], average='weighted')
-            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'wAcc = {:.3f}   |   wF1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
+            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'w_Acc = {:.3f}   |   w_F1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
     
     logging.disable(logging.DEBUG)
 
