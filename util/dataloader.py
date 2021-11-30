@@ -219,7 +219,6 @@ def preprocessing(features, labels, infos, label_dict):
 
 
 def one_hot_encoding(labels, n):
-    logging.info('One_hot_encoding the labels')
     encoded_labels = []
     for label in labels:
         lbl = np.zeros(shape=n, dtype=np.int64)

@@ -48,6 +48,6 @@ class IMUCLSBaseline(nn.Module):
             return self.log_softmax(target)
         else:
             if self.output_size == self.n_classes:
-                return self.softmax(target)
+                return target
             else:
-                return self.sigmoid(target)
+                return target

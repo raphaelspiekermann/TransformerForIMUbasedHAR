@@ -73,10 +73,9 @@ class IMUTransformerEncoder(nn.Module):
 
     def forward(self, data):
         src = data.get('imu')  # Shape N x S x C with S = sequence length, N = batch size, C = channels
-
+        
         # Embed in a high dimensional space and reshape to Transformer's expected shape
         src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
-
 
         # Prepend class token
         cls_token = self.cls_token.unsqueeze(1).repeat(1, src.shape[1], 1)
@@ -85,16 +84,17 @@ class IMUTransformerEncoder(nn.Module):
         # Add the position embedding
         if self.encode_position:
             src += self.position_embed
-    
+        
         # Transformer Encoder pass
         target = self.transformer_encoder(src)[0]
-   
-        # Class probability
+    
+        # Class/Attr probability
         if self.output_size == 1:
             return self.log_softmax(self.imu_head(target))
         else:
             if self.output_size == self.n_classes:
-                return self.softmax(self.imu_head(target))
+                return self.imu_head(target)
             else:
-                return self.sigmoid(self.imu_head(target))
-        
+                return self.imu_head(target)
+
+

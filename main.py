@@ -82,7 +82,7 @@ def run():
             if model.output_size == model.n_classes:
                 loss = torch.nn.CrossEntropyLoss()
             else:
-                loss = torch.nn.BCELoss()
+                loss = torch.nn.BCEWithLogitsLoss()
 
         # Set the optimizer and scheduler
         optim = torch.optim.Adam(model.parameters(),
@@ -207,11 +207,13 @@ def run():
                 else:
                     pred_type = config.get('settings').get('attr_prediction_type')
                     pred_label = res.flatten().cpu().numpy()
+                    pred_label = torch.nn.Sigmoid(pred_label)
                     pred_label = pred_attribute(pred_label, pred_type) if pred_type=='rounding' else pred_attribute(pred_label, pred_type, attr_combinations)
                     real_label = label[0].cpu().numpy()
 
                 predicted.append(pred_label)
                 ground_truth.append(real_label)
+
         logging.info("Testing complete")
         logging.info('Saving classifications')
         classifications = np.array([ground_truth, predicted], dtype=np.int64)
@@ -266,10 +268,10 @@ def eval_run(run_name, dir_path):
         loss_prog_std = np.std(loss_prog, axis=1)
         n_epochs, n_batches = (loss_prog.shape[0], loss_prog.shape[1])
 
-        x_vals_1 = np.array(range(n_epochs * n_batches)) / n_batches
+        #x_vals_1 = np.array(range(n_epochs * n_batches)) / n_batches
         x_vals_2 = np.array(range(1, n_epochs+1)) - .5
         
-        plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
+        #plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
         plt.plot(x_vals_2, loss_prog_avg, label = 'avg_batch_loss')
         plt.plot(x_vals_2, loss_prog_std, label = 'std_batch_loss')
 
@@ -291,7 +293,7 @@ def eval_run(run_name, dir_path):
             matr = confusion_matrix(y_true=classifications[0, :], y_pred=classifications[1, :], labels=classes)
             acc = sklearn.metrics.accuracy_score(y_true=classifications[0, :], y_pred=classifications[1, :])
             f1 = sklearn.metrics.f1_score(y_true=classifications[0, :], y_pred=classifications[1, :], average='weighted')
-            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'w_Acc = {:.3f}   |   w_F1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
+            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'Acc = {:.3f}   |   w_F1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
     
     logging.disable(logging.DEBUG)
 
