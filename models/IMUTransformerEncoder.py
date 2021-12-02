@@ -72,7 +72,8 @@ class IMUTransformerEncoder(nn.Module):
         return 'transformer_encoder'
 
     def forward(self, data):
-        src = data.get('imu')  # Shape N x S x C with S = sequence length, N = batch size, C = channels
+        #src = data.get('imu')  # Shape N x S x C with S = sequence length, N = batch size, C = channels
+        src = data
         
         # Embed in a high dimensional space and reshape to Transformer's expected shape
         src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)

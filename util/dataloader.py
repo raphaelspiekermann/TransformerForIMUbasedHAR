@@ -20,7 +20,7 @@ class IMUDataset(Dataset):
             else:
                 window_shift = min(window_shift, window_size)
         else:
-            raise 'window_shift {} isnt valid'.format(window_shift)
+            raise 'Window_shift {} isnt valid'.format(window_shift)
 
         n = labels.shape[0]
         tmp_start_indices = list(range(0, n - window_size + 1, window_shift))
@@ -28,15 +28,16 @@ class IMUDataset(Dataset):
         #Including only Windows that come from the same recording
         self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]),tmp_start_indices))
 
-        logging.info('n_samples = {}'.format(n))
-        logging.info('n_windows = {}'.format(len(self.start_indices)))
-        logging.info('window_size = {}'.format(window_size))
-        logging.info('stepsize = {}'.format(window_shift))
-        logging.info('labeling_mode = {}'.format(labeling_mode))
+        logging.info('N_samples = {}'.format(n))
+        logging.info('N_windows = {}'.format(len(self.start_indices)))
+        logging.info('Window_size = {}'.format(window_size))
+        logging.info('Stepsize = {}'.format(window_shift))
+        logging.info('Labeling_mode = {}'.format(labeling_mode))
 
         self.imu = normalize_data(features, normalize)
         self.labels = labels
         self.infos = infos
+        self.persons = sorted(np.unique(infos[:,0]))
         self.labeling_mode = labeling_mode
         self.window_size = window_size
             
@@ -63,10 +64,8 @@ class IMUDataset(Dataset):
             
         if labeling_mode ==  'last':
             label = window_labels[-1]
-
-        sample = {'imu': imu,
-                  'label': label}
-        return sample
+            
+        return imu, label
 
 
 def normalize_data(data, normalize):
@@ -74,13 +73,11 @@ def normalize_data(data, normalize):
         normalize = 'None'
     logging.info('Normalization = {}'.format(normalize))
     if normalize == 'average':
-        logging.info('Average-Normalizing of imu-data')
         avg = np.average(data, axis=0)
         data -= avg
         return data
 
     if normalize == 'min_max':
-        logging.info('Min-Max-Normalizing of imu-data')
         for ch in range(data.shape[1]):
             max_ch = np.max(data[:, ch])
             min_ch = np.min(data[:, ch])
@@ -101,45 +98,34 @@ def split_data(dataset, test_size=0.1, split_type='person', np_seed=42):
         n = len(train_data)
         split_idx = int(n * train_ratio)
         
-        if split_type not in ['random', 'person', 'person_random']:
+        if split_type not in ['person', 'person_random']:
             raise RuntimeError('Unknown split_type {} -> see config'.format(split_type))
 
-        if split_type == 'random':
-            start_indices_permutation = np.random.RandomState(seed=np_seed).permutation(n)
-            start_indices = [train_data.start_indices[i] for i in start_indices_permutation]
-
-            train_data.start_indices = start_indices[:split_idx] 
-            test_data.start_indices = start_indices[split_idx:]
 
         if split_type == 'person':
-            persons_unique = np.unique(train_data.infos[:,0])
+            split_idx = int (len(train_data.persons) * train_ratio)
 
-            split_idx = int (len(persons_unique) * train_ratio)
+            train_persons = train_data.persons[:split_idx]
+            test_persons = train_data.persons[split_idx:]
 
-            train_persons = persons_unique[:split_idx]
-            test_persons = persons_unique[split_idx:]
-            
-            logging.info('train_persons = {}'.format(train_persons))
-            logging.info('test_persons = {}'.format(test_persons))
-
-            train_data.start_indices =  [idx for idx in train_data.start_indices if train_data.infos[idx, 0] in train_persons]
+            train_data.start_indices = [idx for idx in train_data.start_indices if train_data.infos[idx, 0] in train_persons]
+            train_data.persons = sorted(train_persons)
             test_data.start_indices = [idx for idx in test_data.start_indices if test_data.infos[idx, 0] in test_persons]
+            test_data.persons = sorted(test_persons)
 
         if split_type == 'person_random':
-            persons_unique = np.unique(train_data.infos[:,0])
-            perm = np.random.RandomState(seed=np_seed).permutation(len(persons_unique))
-            persons_unique = [persons_unique[i] for i in perm]
+            perm = np.random.RandomState(seed=np_seed).permutation(len(train_data.persons))
+            perm = [train_data.persons[i] for i in perm]
 
-            split_idx = int (len(persons_unique) * train_ratio)
+            split_idx = int (len(perm) * train_ratio)
 
-            train_persons = persons_unique[:split_idx]
-            test_persons = persons_unique[split_idx:]
-
-            logging.info('train_persons = {}'.format(train_persons))
-            logging.info('test_persons = {}'.format(test_persons))
+            train_persons = perm[:split_idx]
+            test_persons = perm[split_idx:]
             
             train_data.start_indices =  [idx for idx in train_data.start_indices if train_data.infos[idx, 0] in train_persons]
+            train_data.persons = sorted(train_persons)
             test_data.start_indices = [idx for idx in test_data.start_indices if test_data.infos[idx, 0] in test_persons]
+            test_data.persons = sorted(test_persons)
 
         return train_data, test_data
 
@@ -162,7 +148,7 @@ def get_data(dir_path, np_seed=42, data_config=None):
 
     #logging.info('label_dict = {}'.format(label_dict))
     #logging.info('N_features = {}'.format(features.shape[0]))
-    logging.info('classification_type = {}'.format(classification_type))
+    logging.info('Classification_type = {}'.format(classification_type))
 
     # Preprocessing
     if labels.ndim == 2 and labels.shape[1] == 1:
@@ -171,7 +157,11 @@ def get_data(dir_path, np_seed=42, data_config=None):
     if classification_type == 'classes':
         features, labels, infos, label_dict = preprocessing(features, labels, infos, label_dict)
     
-    logging.info('label_dict = {}'.format(label_dict))
+    if classification_type=='attributes' and data_config['one_hot_encoding']:
+        logging.warning('Cant use one-hot-encoding for attributes -> Setting one_hot_encoding to False')
+        data_config['one_hot_encoding'] = False
+
+    logging.info('Label_dict = {}'.format(label_dict))
     logging.info('One_hot_encoding = {}'.format(data_config.get('one_hot_encoding')))
 
     if data_config.get('one_hot_encoding'):
@@ -199,7 +189,7 @@ def get_data(dir_path, np_seed=42, data_config=None):
 
 
 def preprocessing(features, labels, infos, label_dict):
-    logging.info('Preprocessing the data - Removing Null & None Label')
+    logging.info('Preprocessing - Removing Null & None Label')
     label_dict = {k: v.upper() for k, v in label_dict.items()}
     valid_indices = [idx for idx, label in enumerate(labels) if label_dict.get(label) not in ['NULL', 'NONE']]
     features = np.array([features[idx] for idx in valid_indices])

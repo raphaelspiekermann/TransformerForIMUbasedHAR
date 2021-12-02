@@ -37,7 +37,7 @@ def init_logger(dir_path):
     path = split(realpath(__file__))[0]
     with open(join(path, 'log_config.json')) as json_file:
         log_config_dict = json.load(json_file)
-        run_name = time.strftime("%d_%m_%y_%H_%M_%S", time.localtime())
+        run_name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
         path = create_dir(join(dir_path, 'runs'), run_name)
 
         log_config_dict.get('handlers').get('file_handler')['filename'] = join(path, '{}.log'.format(run_name))
@@ -100,6 +100,7 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, config, dir_path, 
 def init_cuda(device_id_cfg):
     use_cuda = torch.cuda.is_available()
     device_id = 'cpu'
+    torch.random.manual_seed(42)
     if use_cuda:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
