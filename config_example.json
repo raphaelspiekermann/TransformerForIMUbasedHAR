@@ -54,7 +54,7 @@
 	"setup":
 	{
 		"n_freq_checkpoint": 5,
-		"dir_path": "D:\\transformer_dir",
-		"device_id": "cuda:0"
+		"dir_path": "INSERT_DIRECTORY_PATH_HERE",
+		"device_id": "cpu"
 	}
 }

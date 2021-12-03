@@ -504,7 +504,7 @@ def main():
             attr_pred_fun = predict_attribute(config['settings']['attr_prediction_type'])
             avg, std, acc = validation_loop(valid_dataloader, model, device, loss_fn, True, attr_pred_fun)
 
-        logging.info('Epoch loss_avg = {:.3f} | Epoch loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}'.format(epoch_loss, epoch_std, avg, std, acc))
+        logging.info('Epoch loss_avg = {:.3f} | Epoch loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}\n'.format(epoch_loss, epoch_std, avg, std, acc))
 
         # Tracking some stats
         train_loss_avg_prog.append(epoch_loss)
