@@ -272,13 +272,13 @@ def eval_run(run_name, dir_path):
         
         #plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
         plt.plot(x_vals, loss_prog, label = 'avg_batch_loss')
-        plt.plot(x_vals, std_prog, label = 'std_batch_loss')
+        #plt.plot(x_vals, std_prog, label = 'std_batch_loss')
         plt.plot(x_vals, val_loss_prog, label = 'avg_batch_loss on validationset')
-        plt.plot(x_vals, val_std_prog, label = 'std_batch_loss on validationset')
+        #plt.plot(x_vals, val_std_prog, label = 'std_batch_loss on validationset')
         plt.plot(x_vals, val_acc_prog, label = 'accuracy on validationset')
 
         plt.grid()
-        plt.legend()
+        plt.legend(loc='upper left')
         plt.xlabel('Epochs')
         plt.title('Loss_Function_Progress')
 
