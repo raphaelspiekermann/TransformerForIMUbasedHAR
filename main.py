@@ -1,6 +1,7 @@
 import copy
 import json
 import torch
+import pandas as pd
 import numpy as np
 import logging
 from util import utils
@@ -305,9 +306,8 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
     model.train()
 
     batch_losses = []
-    size = len(dataloader.dataset)
             
-    for batch_idx, (X, y) in enumerate(dataloader):
+    for X, y in dataloader:
         X = X.to(device).to(dtype=torch.float32)
         y = y.to(device).to(dtype=torch.long) if model.output_size == 1 else y.to(device).to(dtype=torch.float32)
 
@@ -323,9 +323,6 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
         # Collect for recoding and plotting
         batch_losses.append(loss.item())
 
-        if batch_idx % 100 == 0:
-            loss, current = loss.item(), batch_idx * len(X)
-            logging.info(f"Loss: {loss:>3f}  [{current:>5d}/{size:>5d}]")
     batch_losses = np.array(batch_losses)
     return np.mean(batch_losses), np.std(batch_losses)
 
@@ -384,6 +381,7 @@ def test_loop(dataloader, model, device, predict_attributes=False, attr_pred_fun
                 pred = sig(pred)
                 attr_pred_fun(pred)
                 pred = pred.cpu().numpy()
+                real = y 
             else:
                 real = y.argmax(dim=1).item() if y.ndim > 1 else y.item()
                 pred = pred.argmax(dim=1).item()
@@ -424,11 +422,25 @@ def predict_attribute(pred_type):
     if pred_type == 'rounding':
         return lambda x: x.round_()
         
-    #if pred_type == 'nn':
-    #    dists = np.array([distance.euclidean(arr, y) for y in attr_combinations])
-    #    min_idx = np.argmin(dists)
-    #    return attr_combinations[min_idx]
+    if pred_type == 'nn':
+        __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        attribute_combinations = pd.read_csv(join(__location__, 'attr_per_class_dataset.csv'))
+        attribute_combinations = np.array(attribute_combinations)
+        print(attribute_combinations.shape)
+        attribute_combinations = attribute_combinations[:, 1:]
+        print(attribute_combinations.shape)
+        attribute_combinations = np.unique(attribute_combinations, axis=0)
+        print(attribute_combinations.shape)
 
+        def f(t):
+            device = t.device
+            dists = distance.cdist(t.cpu().numpy(), attribute_combinations, metric='euclidean')
+            attr_combinations = torch.tensor(attribute_combinations, device=device)
+            dists = torch.tensor(dists, device=device)
+            min_indices = torch.argmin(dists, dim=1)
+            for idx in range(min_indices.shape[0]):
+                t[idx] = attr_combinations[min_indices[idx]]
+        return lambda x: f(x)
 
 def main():
     #Reading config.json
@@ -496,7 +508,6 @@ def main():
 
     # Train_loop
     for epoch in range(max(1, train_cfg['n_epochs'])):
-        logging.info('Epoch {}: \n{}'.format(epoch+1, '-' * 100))       
         epoch_loss, epoch_std = train_loop(train_dataloader, model, device, loss_fn, optimizer)
 
         if config['data']['classification_type'] == 'classes':
@@ -505,7 +516,7 @@ def main():
             attr_pred_fun = predict_attribute(config['settings']['attr_prediction_type'])
             avg, std, acc = validation_loop(valid_dataloader, model, device, loss_fn, True, attr_pred_fun)
 
-        logging.info('Epoch loss_avg = {:.3f} | Epoch loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}\n'.format(epoch_loss, epoch_std, avg, std, acc))
+        logging.info('Epoch[{}]: Epoch_loss_avg = {:.3f} | Epoch_loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}\n'.format(epoch, epoch_loss, epoch_std, avg, std, acc))
 
         # Tracking some stats
         train_loss_avg_prog.append(epoch_loss)
@@ -518,7 +529,7 @@ def main():
         scheduler.step()
 
         # Update best model yet
-        if acc > best_model_acc:
+        if acc >= best_model_acc:
             best_model_state = copy.copy(model.state_dict())
             best_model_acc = acc
             best_epoch = epoch

@@ -129,8 +129,6 @@ def download_url(url, output_path, tmp_path=None, extract_archive=False):
         remove(tmp_path)
 
 
-
-
 # Plotting utils
 ##########################
 def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None, file_name=None , normalize=True):
