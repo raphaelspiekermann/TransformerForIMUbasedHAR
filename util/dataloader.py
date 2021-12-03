@@ -1,5 +1,4 @@
 import copy
-from enum import unique
 import logging
 from torch.utils.data import Dataset
 import numpy as np
@@ -11,7 +10,7 @@ class IMUDataset(Dataset):
     """
         A class representing a dataset for IMU learning tasks
     """
-    def __init__(self, features, labels, infos, window_size, window_shift, labeling_mode, normalize):
+    def __init__(self, features, labels, infos, window_size, window_shift, normalize):
         super(IMUDataset, self).__init__()
         
         if window_shift > 0:
@@ -32,13 +31,12 @@ class IMUDataset(Dataset):
         logging.info('N_windows = {}'.format(len(self.start_indices)))
         logging.info('Window_size = {}'.format(window_size))
         logging.info('Stepsize = {}'.format(window_shift))
-        logging.info('Labeling_mode = {}'.format(labeling_mode))
 
-        self.imu = normalize_data(features, normalize)
+        if normalize: normalize_data(features)
+        self.imu = features
         self.labels = labels
         self.infos = infos
         self.persons = sorted(np.unique(infos[:,0]))
-        self.labeling_mode = labeling_mode
         self.window_size = window_size
             
 
@@ -50,60 +48,35 @@ class IMUDataset(Dataset):
         window_indices = list(range(start_index, (start_index + self.window_size)))
         imu = self.imu[window_indices]
         window_labels = self.labels[window_indices]
-        #Choosing label
         
-        labeling_mode = self.labeling_mode
-        if labeling_mode not in ['first', 'middle', 'last', 'mode']:
-            raise RuntimeError('labeling_mode {} not valid'.format(labeling_mode))
-
-        if labeling_mode == 'first':
-            label = window_labels[0]
-            
-        if labeling_mode == 'middle':
-            label = window_labels[int(len(window_labels) / 2)]
-            
-        if labeling_mode ==  'last':
-            label = window_labels[-1]
-            
+        label = window_labels[int(len(window_labels) / 2)]
+        
         return imu, label
 
 
-def normalize_data(data, normalize):
-    if normalize == '':
-        normalize = 'None'
-    logging.info('Normalization = {}'.format(normalize))
-    if normalize == 'average':
-        avg = np.average(data, axis=0)
-        data -= avg
-        return data
-
-    if normalize == 'min_max':
-        for ch in range(data.shape[1]):
-            max_ch = np.max(data[:, ch])
-            min_ch = np.min(data[:, ch])
-            median_old_range = (max_ch + min_ch) / 2
-            data[:, ch] = (data[:, ch] - median_old_range) / (max_ch - min_ch)
-            return data
-    
-    return data 
+def normalize_data(data):
+    for ch in range(data.shape[1]):
+        max_ch = np.max(data[:, ch])
+        min_ch = np.min(data[:, ch])
+        median_old_range = (max_ch + min_ch) / 2
+        data[:, ch] = (data[:, ch] - median_old_range) / (max_ch - min_ch)
 
 
-def split_data(dataset, test_size=0.1, split_type='person', np_seed=42):
-        test_ratio = test_size if 0 < test_size <= 1 else 0.1
-        train_ratio = 1 - test_ratio
+def split_data(dataset, split_ratio=0.1, split_type='person'):
+        split_ratio = split_ratio if 0 < split_ratio <= 1 else 0.1
+        split_ratio = 1 - split_ratio
 
         train_data = dataset
         test_data = copy.copy(train_data)
 
         n = len(train_data)
-        split_idx = int(n * train_ratio)
+        split_idx = int(n * split_ratio)
         
         if split_type not in ['person', 'person_random']:
             raise RuntimeError('Unknown split_type {} -> see config'.format(split_type))
 
-
         if split_type == 'person':
-            split_idx = int (len(train_data.persons) * train_ratio)
+            split_idx = int (len(train_data.persons) * split_ratio)
 
             train_persons = train_data.persons[:split_idx]
             test_persons = train_data.persons[split_idx:]
@@ -114,10 +87,10 @@ def split_data(dataset, test_size=0.1, split_type='person', np_seed=42):
             test_data.persons = sorted(test_persons)
 
         if split_type == 'person_random':
-            perm = np.random.RandomState(seed=np_seed).permutation(len(train_data.persons))
+            perm = np.random.RandomState(seed=42).permutation(len(train_data.persons))
             perm = [train_data.persons[i] for i in perm]
 
-            split_idx = int (len(perm) * train_ratio)
+            split_idx = int (len(perm) * split_ratio)
 
             train_persons = perm[:split_idx]
             test_persons = perm[split_idx:]
@@ -140,47 +113,34 @@ def load_data(dir_path, dataset, classification_type):
     raise 'dataloader {} does not exist'.format(dataset)
 
 
-def get_data(dir_path, np_seed=42, data_config=None):
+def get_data(dir_path, data_config=None):
     # Loading data from disc
     dataset = data_config.get('dataset')
     classification_type = data_config.get('classification_type')
     features, labels, infos, label_dict = load_data(dir_path, dataset, classification_type)
 
-    #logging.info('label_dict = {}'.format(label_dict))
-    #logging.info('N_features = {}'.format(features.shape[0]))
     logging.info('Classification_type = {}'.format(classification_type))
 
     # Preprocessing
-    if labels.ndim == 2 and labels.shape[1] == 1:
-        labels = labels.flatten()
-
     if classification_type == 'classes':
+        labels = labels.flatten()
         features, labels, infos, label_dict = preprocessing(features, labels, infos, label_dict)
-    
-    if classification_type=='attributes' and data_config['one_hot_encoding']:
-        logging.warning('Cant use one-hot-encoding for attributes -> Setting one_hot_encoding to False')
-        data_config['one_hot_encoding'] = False
-
-    logging.info('Label_dict = {}'.format(label_dict))
-    logging.info('One_hot_encoding = {}'.format(data_config.get('one_hot_encoding')))
-
-    if data_config.get('one_hot_encoding'):
         labels = one_hot_encoding(labels, len(label_dict))
 
+    logging.info('Label_dict = {}'.format(label_dict))
 
     # Creating the IMU-Dataset
     window_size = data_config.get('window_size')
     window_shift = data_config.get('window_shift')
-    labeling_mode = data_config.get('labeling_mode')
     normalize = data_config.get('normalize')
-    imu_dataset = IMUDataset(features, labels, infos, window_size, window_shift, labeling_mode, normalize)
+    imu_dataset = IMUDataset(features, labels, infos, window_size, window_shift, normalize)
 
-    if data_config.get('split_type') in ['random', 'person', 'person_random']:
+    if data_config.get('split_type') in ['person', 'person_random']:
         # Splitting the Data
         test_size = data_config.get('test_size')
         split_type = data_config.get('split_type')
         
-        train_data, test_data = split_data(imu_dataset, test_size, split_type, np_seed)
+        train_data, test_data = split_data(imu_dataset, test_size, split_type)
 
         return train_data, test_data, label_dict
 

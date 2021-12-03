@@ -39,26 +39,14 @@ class IMUTransformerEncoder(nn.Module):
 
         if self.encode_position:
             self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim))
+     
+        self.imu_head = nn.Sequential(
+            nn.LayerNorm(self.transformer_dim),
+            nn.Linear(self.transformer_dim,  self.transformer_dim//4),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(self.transformer_dim//4, output_size))
 
-        if output_size == 1:
-            self.imu_head = nn.Sequential(
-                nn.LayerNorm(self.transformer_dim),
-                nn.Linear(self.transformer_dim,  self.transformer_dim//4),
-                nn.GELU(),
-                nn.Dropout(0.1),
-                nn.Linear(self.transformer_dim//4,  n_classes)
-            )
-        else:              
-            self.imu_head = nn.Sequential(
-                nn.LayerNorm(self.transformer_dim),
-                nn.Linear(self.transformer_dim,  self.transformer_dim//4),
-                nn.GELU(),
-                nn.Dropout(0.1),
-                nn.Linear(self.transformer_dim//4, output_size)
-            )
-
-
-        self.log_softmax = nn.LogSoftmax(dim=1) 
         self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
         self.n_classes = n_classes
@@ -90,12 +78,9 @@ class IMUTransformerEncoder(nn.Module):
         target = self.transformer_encoder(src)[0]
     
         # Class/Attr probability
-        if self.output_size == 1:
-            return self.log_softmax(self.imu_head(target))
+        if self.output_size == self.n_classes:
+            return self.imu_head(target)
         else:
-            if self.output_size == self.n_classes:
-                return self.imu_head(target)
-            else:
-                return self.imu_head(target)
+            return self.imu_head(target)
 
 

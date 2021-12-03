@@ -48,7 +48,7 @@ def run():
             config['training']['n_epochs'] = epoch_nr
 
     #Retreiving datasets
-    train_data, test_data, label_dict = get_data(dir_path, config.get('data').get('np_seed'), config.get('data'))
+    train_data, test_data, label_dict = get_data(dir_path, config.get('data'))
     logging.info('Elements in train_data = {}'.format(len(train_data)))
     logging.info('Elements in test_data = {}'.format(len(test_data)))
 
@@ -309,7 +309,7 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
             
     for X, y in dataloader:
         X = X.to(device).to(dtype=torch.float32)
-        y = y.to(device).to(dtype=torch.long) if model.output_size == 1 else y.to(device).to(dtype=torch.float32)
+        y = y.to(device).to(dtype=torch.float32)
 
         # Compute prediction and loss
         pred = model(X)
@@ -339,7 +339,7 @@ def validation_loop(dataloader, model, device, loss_fn, predict_attributes=False
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
-            y = y.to(device).to(dtype=torch.long) if model.output_size == 1 else y.to(device).to(dtype=torch.float32)
+            y = y.to(device).to(dtype=torch.float32)
             pred = model(X)
             batch_losses.append(loss_fn(pred, y).item())
 
@@ -373,7 +373,7 @@ def test_loop(dataloader, model, device, predict_attributes=False, attr_pred_fun
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
-            y = y.to(device).to(dtype=torch.long) if model.output_size == 1 else y.to(device).to(dtype=torch.float32)
+            y = y.to(device).to(dtype=torch.float32)
             pred = model(X)
 
             # Getting the binary coded attribute_vector if needed
@@ -400,14 +400,8 @@ def read_config():
 
 
 def get_loss(model):
-    if model.output_size == 1:
-        return torch.nn.NLLLoss()
-    else:
-        if model.output_size == model.n_classes:
-            return torch.nn.CrossEntropyLoss()
-        else:
-            return torch.nn.BCEWithLogitsLoss()
-
+    return torch.nn.CrossEntropyLoss() if model.output_size == model.n_classes else torch.nn.BCEWithLogitsLoss()
+    
 
 def get_optimizer(model, lr, eps, weight_decay, optimizer='Adam'):
     if optimizer=='Adam':
@@ -442,6 +436,7 @@ def predict_attribute(pred_type):
                 t[idx] = attr_combinations[min_indices[idx]]
         return lambda x: f(x)
 
+
 def main():
     #Reading config.json
     config = read_config()
@@ -461,14 +456,14 @@ def main():
     logging.info('Device_id = {}'.format(device_id))
 
     # Retreiving datasets
-    train_data, test_data, label_dict = get_data(dir_path, config['data']['np_seed'], config['data'])
+    train_data, test_data, label_dict = get_data(dir_path, config['data'])
     learn_data, validation_data = split_data(train_data, config['data']['validation_size'], config['data']['split_type'])
     logging.info('Train_data_persons = {} | Validation_data_persons = {} | Test_data_persons = {}'.format(learn_data.persons, validation_data.persons, test_data.persons))
 
     # Choosing Model
     model_name_ = config['settings']['model_name']
     in_dim_ = train_data.imu.shape[1]
-    out_size_ = 1 if train_data.labels.ndim == 1 else train_data.labels.shape[1]
+    out_size_ = train_data.labels.shape[1]
     win_size_ = train_data.window_size
     n_classes_ = len(label_dict) if label_dict != None else -1
     model_cfg_ = config['model']

@@ -1,25 +1,19 @@
 {
 	"settings": 
 	{
-		"mode": "train_test",
 		"model_name": "transformer",
-		"load_checkpoint": "",
-		"load_training_settings": true,
-		"attr_prediction_type": "rounding"
+		"attr_prediction_type": ""
 	},
 	"data":
 	{
 		"dataset": "motionsense",
 		"classification_type": "classes",
-		"one_hot_encoding": false,
-		"labeling_mode":"middle",
 		"normalize": "",
 		"window_size": 100,
 		"window_shift": 0.75,
 		"test_size": 0.15,
 		"validation_size": 0.25,
-		"split_type": "person",
-		"np_seed": 42
+		"split_type": "person"
 	},
     "model": 
 	{
@@ -49,7 +43,7 @@
 		"eps": 1e-10,
 		"lr_scheduler_step_size": 5,
 		"lr_scheduler_gamma": 0.5,
-		"n_epochs": 30
+		"n_epochs": 2
 	},
 	"setup":
 	{
