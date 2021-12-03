@@ -492,6 +492,7 @@ def main():
     # Best Model
     best_model_state = copy.copy(model.state_dict)
     best_model_acc = 0
+    best_epoch = 0
 
     # Train_loop
     for epoch in range(max(1, train_cfg['n_epochs'])):
@@ -520,7 +521,9 @@ def main():
         if acc > best_model_acc:
             best_model_state = copy.copy(model.state_dict())
             best_model_acc = acc
+            best_epoch = epoch
     
+    logging.info('Most successful epoch = {}'.format(best_epoch))
     model.load_state_dict(best_model_state)
 
     logging.info('Training done!')
