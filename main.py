@@ -185,11 +185,10 @@ def read_config(meta_cfg=False):
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     with open(os.path.join(__location__, 'config.json'), "r") as read_file:
         config = json.load(read_file)
-    meta_config = None
     if meta_cfg:
         with open(os.path.join(__location__, 'meta_config.json'), "r") as read_file:
             meta_config = json.load(read_file)
-    return config, meta_config
+    return config, meta_config if meta_cfg else config
 
 
 def get_loss(model):
@@ -234,8 +233,8 @@ def predict_attribute(pred_type):
 
 def main():
     # Reading config.json
-    config, meta_config = read_config()
-    dir_path = meta_config['setup']['dir_path']
+    config, meta_config = read_config(meta_cfg=True)
+    dir_path = config['setup']['dir_path']
 
     # Initializing Directory
     utils.init_dir_structure(dir_path)
