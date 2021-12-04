@@ -15,7 +15,7 @@
     },
     "handlers": {
         "screen_handler": {
-            "level": "INFO",
+            "level": "WARNING",
             "formatter": "screen",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout"

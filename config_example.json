@@ -1,44 +1,30 @@
 {
 	"settings": 
 	{
-		"model_name": "transformer",
+		"model_name": "baseline",
 		"attr_prediction_type": ""
 	},
 	"data":
 	{
 		"dataset": "motionsense",
 		"classification_type": "classes",
-		"normalize": "",
-		"window_size": 100,
-		"window_shift": 0.75,
+		"normalize": false,
+		"window_size": 50,
+		"window_shift": 1,
 		"test_size": 0.15,
 		"validation_size": 0.25,
 		"split_type": "person"
 	},
     "model": 
 	{
-		"transformer": 
-		{
-			"encode_position": true,
-			"dim": 64,
-			"nhead": 8,
-			"num_encoder_layers": 6, 
-			"dim_feedforward": 128, 
-			"dropout": 0.1, 
-			"activation": "gelu"
-		},
-		"baseline":
-		{
-			"dim": 64,
-			"dropout": 0.1
-		}
+		"encode_position": true
 	},
 	"training":
 	{
 		"batch_size": 128,
 		"n_workers": 6,
 		"optimizer": "Adam",
-		"lr": 1e-3,
+		"lr": 1e-4,
 		"weight_decay": 1e-4,
 		"eps": 1e-10,
 		"lr_scheduler_step_size": 5,
@@ -47,8 +33,7 @@
 	},
 	"setup":
 	{
-		"n_freq_checkpoint": 5,
 		"dir_path": "INSERT_DIRECTORY_PATH_HERE",
-		"device_id": "cpu"
+		"device_id": "cuda:1"
 	}
 }
