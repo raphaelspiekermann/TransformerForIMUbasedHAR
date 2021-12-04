@@ -1,7 +1,7 @@
 {
 	"model_name": ["transformer", "baseline"],
 	"split_type": ["person", "person_random"],
-	"normalize": [false, true],
+	"normalize": [true, false],
 	"window_size": [25],	
 	"encode_position": [true],
 	"torch_seed": [0]
