@@ -32,6 +32,9 @@ class IMU_LSTM(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    def __str__(self):
+        return 'IMU_LSTM'
+
     def forward(self, src):
         # Embed in a high dimensional space and reshape to LSTM's expected shape
         src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)

@@ -260,7 +260,7 @@ def main():
     model_cfg_ = config['model']
             
     model = model_loader.get_model(model_name_, in_dim_, out_size_, win_size_, n_classes_, model_cfg_).to(device)
-
+    logging.info('Model = {}'.format(model))
     # Preparing training
     filename_prefix = join(run_folder, run_name)
     train_cfg = config['training']

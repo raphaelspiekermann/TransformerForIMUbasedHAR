@@ -1,6 +1,6 @@
-from .IMUTransformerEncoder import IMUTransformerEncoder
-from .RawIMUTransformerEncoder import RawIMUTransformerEncoder
-from .IMUCLSBaseline import IMUCLSBaseline
+from .IMU_Transformer_Encoder import IMUTransformerEncoder
+from .Raw_IMU_Transformer_Encoder import RawIMUTransformerEncoder
+from .IMU_CLS_Baseline import IMUCLSBaseline
 from .IMU_LSTM import IMU_LSTM
 from .IMU_RNN import IMU_RNN
 import logging
