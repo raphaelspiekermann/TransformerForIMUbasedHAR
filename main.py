@@ -181,11 +181,15 @@ def test_loop(dataloader, model, device, predict_attributes=False, attr_pred_fun
     return np.array([real_labels, predicted_labels], dtype=np.int64)
 
 
-def read_config():
+def read_config(meta_cfg=False):
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     with open(os.path.join(__location__, 'config.json'), "r") as read_file:
         config = json.load(read_file)
-    return config
+    meta_config = None
+    if meta_cfg:
+        with open(os.path.join(__location__, 'meta_config.json'), "r") as read_file:
+            meta_config = json.load(read_file)
+    return config, meta_config
 
 
 def get_loss(model):
@@ -229,20 +233,40 @@ def predict_attribute(pred_type):
 
 
 def main():
-    #Reading config.json
-    config = read_config()
+    # Reading config.json
+    config, meta_config = read_config()
+    dir_path = meta_config['setup']['dir_path']
 
-    dir_path = config['setup']['dir_path']
-    
     # Initializing Directory
     utils.init_dir_structure(dir_path)
+
+    # Iterating over all Settings:
+    for model_name in meta_config['model_name']:
+        for split_type in meta_config['split_type']:
+            for normalize in meta_config['normalize']:
+                for window_size in meta_config['window_size']:
+                    for encode_position in meta_config['encode_position']:
+                        for torch_seed in meta_config['torch_seed']:
+                            run_cfg = copy.copy(config)
+
+                            run_cfg['settings']['model_name'] = model_name
+                            run_cfg['data']['split_type'] = split_type
+                            run_cfg['data']['normalize'] = normalize
+                            run_cfg['data']['window_size'] = window_size
+                            run_cfg['model']['encode_position'] = encode_position
+                            run_cfg['setup']['torch_seed'] = torch_seed
+
+                            run(run_cfg)
+
+def run(config):
+    dir_path = config['setup']['dir_path']
 
     # Initializing Logger
     run_name = utils.init_logger(dir_path)
     run_folder = join(dir_path, 'runs', run_name)
     
     # Initializing Cuda
-    device, device_id = utils.init_cuda(config['setup']['device_id'])
+    device, device_id = utils.init_cuda(config['setup']['device_id'], config['setup']['torch_seed'])
     torch.multiprocessing.set_sharing_strategy('file_system')
     logging.info('Device_id = {}'.format(device_id))
 
@@ -289,8 +313,11 @@ def main():
     
     # Best Model
     best_model_state = copy.copy(model.state_dict)
-    best_model_acc = 0
+    best_model_loss = 1000
     best_epoch = 0
+    
+    # Patience for early stopping
+    patience = 0
 
     # Train_loop
     for epoch in range(max(1, train_cfg['n_epochs'])):
@@ -315,10 +342,17 @@ def main():
         scheduler.step()
 
         # Update best model yet
-        if acc >= best_model_acc:
+        if avg <= best_model_loss:
             best_model_state = copy.copy(model.state_dict())
-            best_model_acc = acc
+            best_model_loss = avg
             best_epoch = epoch
+            patience = 0
+        else:
+            patience += 1
+            # 5 Iterations with decreasing validation_loss -> Stop training
+            if patience > 4:
+                logging.info('Early stopping after {:2d} epochs'.format(epoch))
+                break
     
     logging.info('Most successful epoch = {}'.format(best_epoch))
     model.load_state_dict(best_model_state)

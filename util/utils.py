@@ -97,10 +97,10 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, config, dir_path, 
     torch.save(checkpoint, join(dir_path, 'checkpoints', file_name))
 
 
-def init_cuda(device_id_cfg):
+def init_cuda(device_id_cfg, torch_seed):
     use_cuda = torch.cuda.is_available()
     device_id = 'cpu'
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(torch_seed)
     if use_cuda:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False

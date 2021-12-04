@@ -1,5 +1,6 @@
 import copy
 import logging
+import torch
 from torch.utils.data import Dataset
 import numpy as np
 from .dataloaders.lara_loader import load as lara_load
@@ -60,6 +61,7 @@ def normalize_data(data):
         min_ch = np.min(data[:, ch])
         median_old_range = (max_ch + min_ch) / 2
         data[:, ch] = (data[:, ch] - median_old_range) / (max_ch - min_ch)
+    data += 0.01 * torch.randn(data.shape)
 
 
 def split_data(dataset, split_ratio=0.1, split_type='person'):
