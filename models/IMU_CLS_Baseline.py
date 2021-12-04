@@ -25,19 +25,12 @@ class IMUCLSBaseline(nn.Module):
         return 'IMUCLSBaseline'
 
     def forward(self, data):
-        print(data.shape)
         target = data.transpose(1, 2)
-        print(target.shape)
         target = self.conv1(target)
-        print(target.shape)
         target = self.conv2(target)
-        print(target.shape)
         target = self.dropout(target)
-        print(target.shape)
         target = self.maxpool(target) # return B X C/2 x M
-        print(target.shape)
         target = target.view(target.size(0), -1) # B X C/2*M
-        print(target.shape)
         target = self.fc1(target)
         return self.fc2(target)
         

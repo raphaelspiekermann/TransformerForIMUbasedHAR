@@ -134,7 +134,7 @@ def get_data(dir_path, data_config=None):
     # Creating the IMU-Dataset
     window_size = data_config.get('window_size')
     if window_size % 2 != 0: 
-        logging.warning('Window_size must be divisible by 2, changing window_size  {} -> {}'.format(window_size, window_size+1))
+        logging.warning('Window_size must be even, changing window_size  {} -> {}'.format(window_size, window_size+1))
         window_size += 1
     window_shift = data_config.get('window_shift')
     normalize = data_config.get('normalize')
