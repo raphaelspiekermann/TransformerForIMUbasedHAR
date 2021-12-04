@@ -2,21 +2,16 @@ import torch
 from torch import nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
-class IMUTransformerEncoder(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, n_classes, transformer_dim,  
+class RawIMUTransformerEncoder(nn.Module):
+    def __init__(self, input_dim, output_dim, window_size, n_classes,  
                                     n_head, dim_feed_forward, n_layers, encode_position):
         super().__init__()
 
-        self.transformer_dim = transformer_dim
+        self.transformer_dim = input_dim
         self.output_dim = output_dim
         self.window_size = window_size
         self.encode_position = encode_position
         self.n_classes = n_classes
-        
-        self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU(),
-                                nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU(),
-                                nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU(),
-                                nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU())
  
         encoder_layer = TransformerEncoderLayer(d_model = self.transformer_dim,
                                        nhead = n_head,
@@ -38,6 +33,7 @@ class IMUTransformerEncoder(nn.Module):
             nn.Dropout(0.1),
             nn.Linear(self.transformer_dim//4, output_dim))
 
+
         # init
         for p in self.parameters():
             if p.dim() > 1:
@@ -48,7 +44,7 @@ class IMUTransformerEncoder(nn.Module):
 
     def forward(self, src):
         # Embed in a high dimensional space and reshape to Transformer's expected shape
-        src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
+        src = src.transpose(1, 2).permute(2, 0, 1)
 
         # Prepend class token
         cls_token = self.cls_token.unsqueeze(1).repeat(1, src.shape[1], 1)

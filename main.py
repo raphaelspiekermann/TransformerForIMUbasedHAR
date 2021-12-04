@@ -193,9 +193,9 @@ def get_loss(model):
     
 
 def get_optimizer(model, lr, eps, weight_decay, optimizer='Adam'):
-    if optimizer==['adam', 'Adam']:
+    if optimizer.lower()=='adam':
         return torch.optim.Adam(model.parameters(), lr=lr, eps=eps, weight_decay=weight_decay)
-    if optimizer in ['sgd', 'SGD']:
+    if optimizer.lower()=='sgd':
         return torch.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
 
 
@@ -302,7 +302,7 @@ def main():
             attr_pred_fun = predict_attribute(config['settings']['attr_prediction_type'])
             avg, std, acc = validation_loop(valid_dataloader, model, device, loss_fn, True, attr_pred_fun)
 
-        logging.info('Epoch[{}]: Epoch_loss_avg = {:.3f} | Epoch_loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}\n'.format(epoch, epoch_loss, epoch_std, avg, std, acc))
+        logging.info('Epoch[{:02d}]: Epoch_loss_avg = {:.3f} | Epoch_loss_std = {:.3f} | Val_loss_avg = {:.3f} | Val_loss_std = {:.3f} | Val_acc = {:.3f}'.format(epoch, epoch_loss, epoch_std, avg, std, acc))
 
         # Tracking some stats
         train_loss_avg_prog.append(epoch_loss)
