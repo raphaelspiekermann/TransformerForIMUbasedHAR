@@ -68,9 +68,9 @@ def eval_run(run_name, dir_path):
         plt.plot(x_vals, val_acc_prog, label = 'accuracy on validationset')
 
         plt.grid()
-        plt.legend(loc='upper left')
+        plt.legend()
         plt.xlabel('Epochs')
-        plt.title('Loss_Function_Progress')
+        plt.title('Loss_Progress')
 
         plt.savefig(join(dir_run, 'loss.pdf'))
 
@@ -193,8 +193,10 @@ def get_loss(model):
     
 
 def get_optimizer(model, lr, eps, weight_decay, optimizer='Adam'):
-    if optimizer=='Adam':
+    if optimizer==['adam', 'Adam']:
         return torch.optim.Adam(model.parameters(), lr=lr, eps=eps, weight_decay=weight_decay)
+    if optimizer in ['sgd', 'SGD']:
+        return torch.optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
 
 
 def get_scheduler(optimizer, step_size, gamma):
