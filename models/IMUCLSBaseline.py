@@ -1,13 +1,13 @@
 import torch.nn as nn
 
 class IMUCLSBaseline(nn.Module):
-    def __init__(self, input_dim, output_size, window_size, n_classes):
+    def __init__(self, input_dim, output_dim, window_size, n_classes):
 
         super(IMUCLSBaseline, self).__init__()
 
         feature_dim = 64
 
-        self.output_size = output_size
+        self.output_dim = output_dim
 
         self.conv1 = nn.Sequential(nn.Conv1d(input_dim, feature_dim, kernel_size=1), nn.ReLU())
         self.conv2 = nn.Sequential(nn.Conv1d(feature_dim, feature_dim, kernel_size=1), nn.ReLU())
@@ -15,7 +15,7 @@ class IMUCLSBaseline(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.maxpool = nn.MaxPool1d(2) # Collapse T time steps to T/2
         self.fc1 = nn.Linear(window_size*(feature_dim//2), feature_dim, nn.ReLU())
-        self.fc2 = nn.Linear(feature_dim,  n_classes) if output_size == 1 else nn.Linear(feature_dim, output_size)
+        self.fc2 = nn.Linear(feature_dim,  n_classes) if output_dim == 1 else nn.Linear(feature_dim, output_dim)
         self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
         self.n_classes = n_classes
