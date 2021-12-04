@@ -144,7 +144,7 @@ def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None
         for row in confusion_matr:
             row *= 100 / np.sum(row)
     
-    plt.figure(figsize=(16, 9), dpi=120)
+    fig = plt.figure(figsize=(16, 9), dpi=120)
     sns.set_theme()
     own_cmap = sns.color_palette("viridis", as_cmap=True) #sns.color_palette("pastel", as_cmap=True)
     
@@ -164,4 +164,4 @@ def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None
 
     if file_name != None:
         plt.savefig(file_name)
-
+    plt.close(fig)

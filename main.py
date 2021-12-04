@@ -49,7 +49,7 @@ def eval_run(run_name, dir_path):
     # Loss progress
     loss_file = join(dir_run, '{}_loss.npy'.format(run_name))
     if isfile(loss_file):
-        plt.figure()
+        fig = plt.figure()
 
         data = np.load(loss_file)
         loss_prog = data[0,:]
@@ -73,6 +73,7 @@ def eval_run(run_name, dir_path):
         plt.title('Loss_Progress')
 
         plt.savefig(join(dir_run, 'loss.pdf'))
+        plt.close(fig)
 
     # Evaluating the classifications
     classifications_file = join(dir_run, '{}_classifications.npy'.format(run_name))
