@@ -61,7 +61,7 @@ def normalize_data(data):
         min_ch = np.min(data[:, ch])
         median_old_range = (max_ch + min_ch) / 2
         data[:, ch] = (data[:, ch] - median_old_range) / (max_ch - min_ch)
-    data = data + 0.01 * np.randn(data.shape)
+    data = data + 0.01 * torch.randn(data.shape).numpy()
 
 
 def split_data(dataset, split_ratio=0.1, split_type='person'):
@@ -136,6 +136,8 @@ def get_data(dir_path, data_config=None):
     window_shift = data_config.get('window_shift')
     normalize = data_config.get('normalize')
     imu_dataset = IMUDataset(features, labels, infos, window_size, window_shift, normalize)
+
+    logging.info('Normalize = {}'.format(normalize))
 
     if data_config.get('split_type') in ['person', 'person_random']:
         # Splitting the Data
