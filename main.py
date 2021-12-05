@@ -350,7 +350,7 @@ def run(config):
         else:
             patience += 1
             # 5 Iterations with decreasing validation_loss -> Stop training
-            if patience > 4:
+            if patience > 4 and epoch >= 10:
                 logging.info('Early stopping after {:2d} epochs'.format(epoch))
                 break
     
