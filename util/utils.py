@@ -5,6 +5,7 @@ import json
 from os.path import join, exists, split, realpath, isfile
 import time
 from os import mkdir, remove
+import matplotlib
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -165,3 +166,4 @@ def create_heatmap(real_labels, pred_labels, labels, label_dict=None, title=None
     if file_name != None:
         plt.savefig(file_name)
     plt.close(fig)
+    matplotlib.rc_file_defaults()

@@ -1,5 +1,6 @@
 import copy
 import json
+import matplotlib
 import torch
 import pandas as pd
 import numpy as np
@@ -14,17 +15,6 @@ import sklearn.metrics
 from scipy.spatial import distance
 import matplotlib.pyplot as plt
 import torch.multiprocessing
-
-
-def pred_attribute(arr, pred_type, attr_combinations=None):
-    if pred_type == 'rounding':
-        for idx in range(arr.shape[0]):
-            arr[idx] = 0 if arr[idx] < .5 else 1
-        return arr
-    if pred_type == 'nn':
-        dists = np.array([distance.euclidean(arr, y) for y in attr_combinations])
-        min_idx = np.argmin(dists)
-        return attr_combinations[min_idx]
 
 
 def eval_run(run_name, dir_path):
@@ -49,22 +39,15 @@ def eval_run(run_name, dir_path):
     # Loss progress
     loss_file = join(dir_run, '{}_loss.npy'.format(run_name))
     if isfile(loss_file):
-        fig = plt.figure()
-
         data = np.load(loss_file)
         loss_prog = data[0,:]
-        std_prog = data[1,:]
         val_loss_prog = data[2,:]
-        val_std_prog = data[3,:]
         val_acc_prog = data[4,:]
         
         x_vals = np.array(range(data.shape[1]))
         
-        #plt.plot(x_vals_1, loss_prog.flatten(), label = 'loss')
         plt.plot(x_vals, loss_prog, label = 'avg_batch_loss')
-        #plt.plot(x_vals, std_prog, label = 'std_batch_loss')
         plt.plot(x_vals, val_loss_prog, label = 'avg_batch_loss on validationset')
-        #plt.plot(x_vals, val_std_prog, label = 'std_batch_loss on validationset')
         plt.plot(x_vals, val_acc_prog, label = 'accuracy on validationset')
 
         plt.grid()
@@ -72,8 +55,8 @@ def eval_run(run_name, dir_path):
         plt.xlabel('Epochs')
         plt.title('Loss_Progress')
 
-        plt.savefig(join(dir_run, 'loss.pdf'))
-        plt.close(fig)
+        plt.savefig(join(dir_run, 'loss.png'))        
+        plt.close('all')
 
     # Evaluating the classifications
     classifications_file = join(dir_run, '{}_classifications.npy'.format(run_name))
@@ -86,9 +69,10 @@ def eval_run(run_name, dir_path):
             matr = confusion_matrix(y_true=classifications[0, :], y_pred=classifications[1, :], labels=classes)
             acc = sklearn.metrics.accuracy_score(y_true=classifications[0, :], y_pred=classifications[1, :])
             f1 = sklearn.metrics.f1_score(y_true=classifications[0, :], y_pred=classifications[1, :], average='weighted')
-            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'Acc = {:.3f}   |   w_F1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.pdf'), True)
+            utils.create_heatmap(classifications[0,:], classifications[1,:], classes, label_dict, 'Acc = {:.3f}   |   w_F1 = {:.3f}'.format(acc, f1), join(dir_run, 'classification_heatmap.png'), True)
     
     logging.disable(logging.DEBUG)
+    matplotlib.rc_file_defaults()
 
 
 def train_loop(dataloader, model, device, loss_fn, optimizer):
@@ -258,6 +242,7 @@ def main():
 
                             run(run_cfg)
 
+
 def run(config):
     dir_path = config['setup']['dir_path']
 
@@ -313,7 +298,8 @@ def run(config):
     
     # Best Model
     best_model_state = copy.copy(model.state_dict)
-    best_model_loss = 1000
+    best_model_acc = 0
+    last_epoch_acc = 0
     best_epoch = 0
     
     # Patience for early stopping
@@ -342,17 +328,21 @@ def run(config):
         scheduler.step()
 
         # Update best model yet
-        if avg <= best_model_loss:
+        if acc >= best_model_acc:
             best_model_state = copy.copy(model.state_dict())
-            best_model_loss = avg
+            best_model_acc = acc
             best_epoch = epoch
             patience = 0
         else:
-            patience += 1
-            # 5 Iterations with decreasing validation_loss -> Stop training
-            if patience > 4 and epoch >= 10:
-                logging.info('Early stopping after {:2d} epochs'.format(epoch))
-                break
+            if acc >= last_epoch_acc:
+                patience = 0
+            else: 
+                patience += 1
+                # 5 Iterations with decreasing accuracy -> Stop training
+                if patience >= 5  and epoch >= 10:
+                    logging.info('Early stopping after {:2d} epochs'.format(epoch))
+                    break
+        last_epoch_acc = acc
     
     logging.info('Most successful epoch = {}'.format(best_epoch))
     model.load_state_dict(best_model_state)
