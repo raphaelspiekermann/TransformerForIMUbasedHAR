@@ -41,7 +41,7 @@ class IMUTransformerEncoder(nn.Module):
                 nn.init.xavier_uniform_(p)
 
     def __str__(self):
-        return 'Transformer_Encoder with dim={}.'.format(self.transformer_dim)
+        return 'Transformer_Encoder with dim={}'.format(self.transformer_dim)
 
     def forward(self, src):
         # Embed in a high dimensional space and reshape to Transformer's expected shape
