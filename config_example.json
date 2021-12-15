@@ -4,8 +4,8 @@
         "dataset": "lara",
         "classification_type": "classes",
         "normalize": true,
-        "window_size": 200,
-        "window_shift": 0.25,
+        "window_size": 50,
+        "window_shift": 0.125,
         "test_size": 0.15,
         "validation_size": 0.25,
         "split_type": "person"
@@ -18,11 +18,11 @@
         "eps": 1e-10,
         "lr_scheduler_step_size": 5,
         "lr_scheduler_gamma": 0.5,
-        "n_epochs": 10
+        "n_epochs": 5
     },
     "setup": {
-		"dir_path": "INSERT_DIRECTORY_PATH_HERE",
+        "dir_path": "INSERT_DIRECTORY_PATH_HERE",
         "torch_seed": 0,
-		"device_id": "cuda:1"
+        "device_id": "cuda:1"
 	}
 }

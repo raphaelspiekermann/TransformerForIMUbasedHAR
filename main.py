@@ -159,19 +159,6 @@ def main(run_meta=False):
         run(config)
 
 
-def get_weight_vec(dataset):
-    labels = np.array(sorted([l for l in dataset.labels]))
-    unique_labels = np.unique(labels)
-    label_count = np.zeros(unique_labels.shape[0])
-    for label in labels:
-        label_count[label] += 1
-    
-    max = np.max(label_count)
-    weight_vec = [max / label_count[idx]  for idx in unique_labels]
-
-    return weight_vec
-
-
 def run(config):
     dir_path = config['setup']['dir_path']
 
@@ -228,6 +215,10 @@ def run(config):
     best_model_state = copy.copy(model.state_dict())
     best_model_acc = 0
     best_epoch = 0
+
+    # Patience
+    patience = 0
+    last_epoch_acc = 0
     
     attr_pred_fun = None if predict_classes else predict_attributes(get_combinations())
 
@@ -252,6 +243,15 @@ def run(config):
             best_model_state = copy.copy(model.state_dict())
             best_model_acc = val_acc
             best_epoch = epoch
+            patience = 0
+        else:
+            patience = 0 if val_acc >= last_epoch_acc else patience + 1
+            if patience >= 3 and epoch >= 10:
+                # Stopping after 3 consecutive epochs with descending accuracy
+                logging.info('Early stopping after {:2d} epochs'.format(epoch))
+                break
+        
+        last_epoch_acc = val_acc
     
     logging.info('Most successful epoch = {:2d}'.format(best_epoch))
     model.load_state_dict(best_model_state)
@@ -278,4 +278,4 @@ def run(config):
 
 
 if __name__ == '__main__':
-    main(run_meta=False)
+    main(run_meta=True)
