@@ -3,15 +3,12 @@ from torch import nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 class RawIMUTransformerEncoder(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, n_classes,  
-                                    n_head, dim_feed_forward, n_layers, encode_position):
+    def __init__(self, input_dim, output_dim, window_size, n_head, dim_feed_forward, n_layers):
         super().__init__()
 
         self.transformer_dim = input_dim
         self.output_dim = output_dim
         self.window_size = window_size
-        self.encode_position = encode_position
-        self.n_classes = n_classes
  
         encoder_layer = TransformerEncoderLayer(d_model = self.transformer_dim,
                                        nhead = n_head,
@@ -51,8 +48,7 @@ class RawIMUTransformerEncoder(nn.Module):
         src = torch.cat([cls_token, src])
 
         # Add the position embedding
-        if self.encode_position:
-            src += self.position_embed
+        src += self.position_embed
         
         # Transformer Encoder pass
         target = self.transformer_encoder(src)[0]

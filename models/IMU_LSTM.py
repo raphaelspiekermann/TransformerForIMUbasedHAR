@@ -2,12 +2,10 @@ import torch
 import torch.nn as nn
 
 class IMU_LSTM(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, n_classes, lstm_dim, encode_position):
+    def __init__(self, input_dim, output_dim, window_size, lstm_dim):
         super().__init__()
         self.output_dim = output_dim
         self.window_size = window_size
-        self.encode_position = encode_position
-        self.n_classes = n_classes
         
         self.input_proj = nn.Sequential(nn.Conv1d(input_dim, lstm_dim, 1), nn.GELU(),
                                 nn.Conv1d(lstm_dim, lstm_dim, 1), nn.GELU(),
@@ -44,8 +42,7 @@ class IMU_LSTM(nn.Module):
         src = torch.cat([cls_token, src])
 
         # Add the position embedding
-        if self.encode_position:
-            src += self.position_embed
+        src += self.position_embed
         
         # Transformer Encoder pass
         target, _ = self.lstm(src)

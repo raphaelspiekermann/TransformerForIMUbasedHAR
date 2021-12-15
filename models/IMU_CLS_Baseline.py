@@ -1,12 +1,11 @@
 import torch.nn as nn
 
 class IMUCLSBaseline(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, n_classes):
+    def __init__(self, input_dim, output_dim, window_size):
         super(IMUCLSBaseline, self).__init__()
 
         cnn_dim = 64
         self.output_dim = output_dim
-        self.n_classes = n_classes
 
         self.conv1 = nn.Sequential(nn.Conv1d(input_dim, cnn_dim, kernel_size=1), nn.ReLU())
         self.conv2 = nn.Sequential(nn.Conv1d(cnn_dim, cnn_dim, kernel_size=1), nn.ReLU())

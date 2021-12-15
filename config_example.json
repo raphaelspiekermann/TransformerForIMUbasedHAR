@@ -1,39 +1,28 @@
 {
-	"settings": 
-	{
-		"model_name": "baseline",
-		"attr_prediction_type": ""
-	},
-	"data":
-	{
-		"dataset": "motionsense",
-		"classification_type": "classes",
-		"normalize": false,
-		"window_size": 50,
-		"window_shift": 1,
-		"test_size": 0.15,
-		"validation_size": 0.25,
-		"split_type": "person"
-	},
-    "model": 
-	{
-		"encode_position": true
-	},
-	"training":
-	{
-		"batch_size": 128,
-		"n_workers": 6,
-		"optimizer": "Adam",
-		"lr": 1e-4,
-		"weight_decay": 1e-4,
-		"eps": 1e-10,
-		"lr_scheduler_step_size": 5,
-		"lr_scheduler_gamma": 0.5,
-		"n_epochs": 2
-	},
-	"setup":
-	{
+    "data": {
+        "model_name": "transformer",
+        "dataset": "lara",
+        "classification_type": "classes",
+        "normalize": true,
+        "window_size": 200,
+        "window_shift": 0.25,
+        "test_size": 0.15,
+        "validation_size": 0.25,
+        "split_type": "person"
+    },
+    "training": {
+        "batch_size": 128,
+        "n_workers": 8,
+        "lr": 1e-4,
+        "weight_decay": 1e-4,
+        "eps": 1e-10,
+        "lr_scheduler_step_size": 5,
+        "lr_scheduler_gamma": 0.5,
+        "n_epochs": 10
+    },
+    "setup": {
 		"dir_path": "INSERT_DIRECTORY_PATH_HERE",
+        "torch_seed": 0,
 		"device_id": "cuda:1"
 	}
 }

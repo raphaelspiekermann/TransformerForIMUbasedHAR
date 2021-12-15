@@ -3,15 +3,12 @@ from torch import nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 class IMUTransformerEncoder(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, n_classes, transformer_dim,  
-                                    n_head, dim_feed_forward, n_layers, encode_position):
+    def __init__(self, input_dim, output_dim, window_size, transformer_dim, n_head, dim_feed_forward, n_layers):
         super().__init__()
 
         self.transformer_dim = transformer_dim
         self.output_dim = output_dim
         self.window_size = window_size
-        self.encode_position = encode_position
-        self.n_classes = n_classes
         
         self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU(),
                                 nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU(),
@@ -55,11 +52,10 @@ class IMUTransformerEncoder(nn.Module):
         src = torch.cat([cls_token, src])
 
         # Add the position embedding
-        if self.encode_position:
-            src += self.position_embed
+        src += self.position_embed
         
         # Transformer Encoder pass
         target = self.transformer_encoder(src)[0]
-    
+
         # Class/Attr probability
         return self.imu_head(target)

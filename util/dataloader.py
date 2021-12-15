@@ -26,15 +26,14 @@ class IMUDataset(Dataset):
         tmp_start_indices = list(range(0, n - window_size + 1, window_shift))
 
         #Including only Windows that come from the same recording
-        self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]),tmp_start_indices))
+        self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]), tmp_start_indices))
 
         logging.info('N_samples = {}'.format(n))
         logging.info('N_windows = {}'.format(len(self.start_indices)))
         logging.info('Window_size = {}'.format(window_size))
         logging.info('Stepsize = {}'.format(window_shift))
 
-        if normalize: normalize_data(features)
-        self.imu = features
+        self.imu = normalize_data(features) if normalize else features
         self.labels = labels
         self.infos = infos
         self.persons = sorted(np.unique(infos[:,0]))
@@ -44,13 +43,12 @@ class IMUDataset(Dataset):
     def __len__(self):
         return len(self.start_indices)
 
+
     def __getitem__(self, idx):
         start_index = self.start_indices[idx]
         window_indices = list(range(start_index, (start_index + self.window_size)))
         imu = self.imu[window_indices]
-        window_labels = self.labels[window_indices]
-        
-        label = window_labels[int(len(window_labels) / 2)]
+        label = self.labels[start_index + self.window_size // 2]
         
         return imu, label
 
@@ -61,7 +59,7 @@ def normalize_data(data):
         min_ch = np.min(data[:, ch])
         median_old_range = (max_ch + min_ch) / 2
         data[:, ch] = (data[:, ch] - median_old_range) / (max_ch - min_ch)
-    data = data + 0.01 * torch.randn(data.shape).numpy()
+    return data + 0.01 * torch.randn(data.shape).numpy()
 
 
 def split_data(dataset, split_ratio=0.1, split_type='person'):
@@ -83,9 +81,9 @@ def split_data(dataset, split_ratio=0.1, split_type='person'):
             train_persons = train_data.persons[:split_idx]
             test_persons = train_data.persons[split_idx:]
 
-            train_data.start_indices = [idx for idx in train_data.start_indices if train_data.infos[idx, 0] in train_persons]
+            train_data.start_indices = get_indices_for_persons(train_data, train_persons)
             train_data.persons = sorted(train_persons)
-            test_data.start_indices = [idx for idx in test_data.start_indices if test_data.infos[idx, 0] in test_persons]
+            test_data.start_indices = get_indices_for_persons(test_data, test_persons)
             test_data.persons = sorted(test_persons)
 
         if split_type == 'person_random':
@@ -97,15 +95,19 @@ def split_data(dataset, split_ratio=0.1, split_type='person'):
             train_persons = perm[:split_idx]
             test_persons = perm[split_idx:]
             
-            train_data.start_indices =  [idx for idx in train_data.start_indices if train_data.infos[idx, 0] in train_persons]
+            train_data.start_indices =  get_indices_for_persons(train_data, train_persons)
             train_data.persons = sorted(train_persons)
-            test_data.start_indices = [idx for idx in test_data.start_indices if test_data.infos[idx, 0] in test_persons]
+            test_data.start_indices = get_indices_for_persons(test_data, test_persons)
             test_data.persons = sorted(test_persons)
 
         return train_data, test_data
 
 
-def load_data(dir_path, dataset, classification_type):
+def get_indices_for_persons(data, persons):
+    return [idx for idx in data.start_indices if data.infos[idx, 0] in persons]
+
+
+def load_data(dir_path, dataset, classification_type=None):
     if dataset == 'motionsense':  
         return motionsense_load(dir_path)
     if dataset == 'lara': 
@@ -127,7 +129,6 @@ def get_data(dir_path, data_config=None):
     if classification_type == 'classes':
         labels = labels.flatten()
         features, labels, infos, label_dict = preprocessing(features, labels, infos, label_dict)
-        labels = one_hot_encoding(labels, len(label_dict))
 
     logging.info('Label_dict = {}'.format(label_dict))
 
@@ -142,17 +143,13 @@ def get_data(dir_path, data_config=None):
 
     logging.info('Normalize = {}'.format(normalize))
 
-    if data_config.get('split_type') in ['person', 'person_random']:
-        # Splitting the Data
-        test_size = data_config.get('test_size')
-        split_type = data_config.get('split_type')
+    # Splitting the Data
+    test_size = data_config.get('test_size')
+    split_type = data_config.get('split_type')
         
-        train_data, test_data = split_data(imu_dataset, test_size, split_type)
+    train_data, test_data = split_data(imu_dataset, test_size, split_type)
 
-        return train_data, test_data, label_dict
-
-    else:
-        return imu_dataset, label_dict
+    return train_data, test_data, label_dict
 
 
 def preprocessing(features, labels, infos, label_dict):
@@ -173,12 +170,3 @@ def preprocessing(features, labels, infos, label_dict):
     labels = np.array([reverse_translation_dict[lbl] for lbl in labels])
 
     return features, labels, infos, new_dict
-
-
-def one_hot_encoding(labels, n):
-    encoded_labels = []
-    for label in labels:
-        lbl = np.zeros(shape=n, dtype=np.int64)
-        lbl[label] = 1
-        encoded_labels.append(lbl)
-    return np.array(encoded_labels, dtype=np.int64)
