@@ -200,7 +200,7 @@ def run(config):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
 
     # Set the dataset and data loader
-    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': train_cfg['n_workers']}
+    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 4}
     train_dataloader = torch.utils.data.DataLoader(learn_data, **loader_params)
     valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params)
     
