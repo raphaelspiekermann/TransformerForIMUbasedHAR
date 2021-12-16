@@ -7,7 +7,7 @@ from ..utils import download_url
 import logging
 import shutil
 
-def load(path_to_data, force_download=False):
+def load(path_to_data):
     lbl_dirs = ["dws","ups", "wlk", "jog", "std", "sit"]
     lbl_dict = {'dws':0, 'ups':1, 'wlk':2, 'jog':3, 'std':4, 'sit':5}
     recordings = range(1,17)
@@ -15,9 +15,9 @@ def load(path_to_data, force_download=False):
 
     path = join(path_to_data, 'data', 'motionsense')
 
-    features = np.zeros((0, 6), dtype=np.float64)
-    labels = np.zeros((0, 1), dtype=np.int64)
-    infos = np.zeros((0, 2), dtype=np.int64)
+    features = np.zeros((0, 6), dtype=np.float32)
+    labels = np.zeros((0, 1), dtype=np.int32)
+    infos = np.zeros((0, 2), dtype=np.int32)
 
     if not exists(path):
         logging.info('motionsense_data not found under {}'.format(path))
@@ -37,10 +37,10 @@ def load(path_to_data, force_download=False):
                     dataset = pd.read_csv(path_to_csv) 
                     raw_features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'attitude.roll', 'attitude.pitch', 'attitude.yaw']]
 
-                    lbls = np.zeros((len(raw_features), 1))
+                    lbls = np.zeros((len(raw_features), 1), dtype=np.int32)
                     lbls[:,0] = lbl_dict[dir]
 
-                    infs = np.zeros((len(raw_features), 2), dtype=np.int64)
+                    infs = np.zeros((len(raw_features), 2), dtype=np.int32)
                     infs[:,0] = sub
                     infs[:,1] = rec
 

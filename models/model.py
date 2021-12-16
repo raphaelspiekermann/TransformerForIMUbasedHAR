@@ -25,7 +25,7 @@ def get_model(model_name, input_dim, output_size, window_size):
 
     # RNNs
     if model_name.lower()=='lstm':
-        return IMU_LSTM(input_dim, output_size, window_size, 64)
+        return IMU_LSTM(input_dim, output_size, window_size, 128)
 
 
 def get_nhead(dim):

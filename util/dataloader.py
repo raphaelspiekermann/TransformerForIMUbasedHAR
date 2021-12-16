@@ -45,10 +45,10 @@ class IMUDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        start_index = self.start_indices[idx]
-        window_indices = list(range(start_index, (start_index + self.window_size)))
-        imu = self.imu[window_indices]
-        label = self.labels[start_index + self.window_size // 2]
+        start_idx = self.start_indices[idx]
+        win_size = self.window_size
+        imu = self.imu[start_idx : start_idx + win_size]
+        label = self.labels[start_idx + win_size // 2]
         
         return imu, label
 
@@ -156,9 +156,9 @@ def preprocessing(features, labels, infos, label_dict):
     logging.info('Preprocessing - Removing Null & None Label')
     label_dict = {k: v.upper() for k, v in label_dict.items()}
     valid_indices = [idx for idx, label in enumerate(labels) if label_dict.get(label) not in ['NULL', 'NONE']]
-    features = np.array([features[idx] for idx in valid_indices])
-    labels = np.array([labels[idx] for idx in valid_indices])
-    infos = np.array([infos[idx] for idx in valid_indices])
+    features = np.array([features[idx] for idx in valid_indices], dtype=np.float32)
+    labels = np.array([labels[idx] for idx in valid_indices], dtype=np.int32)
+    infos = np.array([infos[idx] for idx in valid_indices], dtype=np.int32)
 
     unique_labels = np.unique(labels)
     unique_labels = np.sort(unique_labels)
@@ -167,6 +167,6 @@ def preprocessing(features, labels, infos, label_dict):
     new_dict = {lbl: label_dict[translation_dict[lbl]] for lbl in translation_dict.keys()}
 
     reverse_translation_dict = {v: k for k, v in translation_dict.items()}
-    labels = np.array([reverse_translation_dict[lbl] for lbl in labels])
+    labels = np.array([reverse_translation_dict[lbl] for lbl in labels], dtype=np.int32)
 
     return features, labels, infos, new_dict

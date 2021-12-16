@@ -20,7 +20,7 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
 
     for X, y in dataloader:
         X = X.to(device).to(dtype=torch.float32)
-        y = y.to(device).to(dtype=torch.long) if str(loss_fn) == 'CrossEntropyLoss()' else y.to(device).to(dtype=torch.float32)
+        y = y.to(device).to(dtype=torch.int64) if str(loss_fn) == 'CrossEntropyLoss()' else y.to(device).to(dtype=torch.float32)
 
         # Compute prediction and loss
         pred = model(X)
@@ -53,7 +53,7 @@ def validation_loop(dataloader, model, device, loss_fn, attr_pred_fun=None):
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
-            y = y.to(device).to(dtype=torch.long) if str(loss_fn) == 'CrossEntropyLoss()' else y.to(device).to(dtype=torch.float32)
+            y = y.to(device).to(dtype=torch.int64) if str(loss_fn) == 'CrossEntropyLoss()' else y.to(device).to(dtype=torch.float32)
 
             pred = model(X)
             loss = loss_fn(pred, y)
@@ -85,7 +85,7 @@ def test_loop(dataloader, model, device, attr_pred_fun=None):
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
-            y = y.to(device).to(dtype=torch.float32)
+            y = y.to(dtype=torch.float32)
             pred = model(X)
 
             # Getting the binary coded attribute_vector if needed
@@ -93,7 +93,7 @@ def test_loop(dataloader, model, device, attr_pred_fun=None):
                 pred = sig(pred)
                 attr_pred_fun(pred)
                 pred = pred.cpu().numpy()
-                real = y.cpu().numpy() 
+                real = y.numpy() 
             else:
                 real = y.item()
                 pred = pred.argmax(dim=1).item()
@@ -261,7 +261,7 @@ def run(config):
     np.save(filename_prefix + '_loss.npy', stats)
     torch.save(model.state_dict(), join(dir_path, filename_prefix + '_model.pth'))
 
-    loader_params = {'batch_size': 1, 'shuffle': False, 'num_workers': config['training']['n_workers']}
+    loader_params = {'batch_size': 1, 'shuffle': False, 'num_workers': 0}
     test_dataloader = torch.utils.data.DataLoader(test_data, **loader_params)
 
     logging.info("Testing ...")
