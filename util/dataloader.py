@@ -72,7 +72,7 @@ def split_data(dataset, split_ratio=0.1, split_type='person'):
         n = len(train_data)
         split_idx = int(n * split_ratio)
         
-        if split_type not in ['person', 'person_random']:
+        if split_type not in ['person', 'person_random', 'person random']:
             raise RuntimeError('Unknown split_type {} -> see config'.format(split_type))
 
         if split_type == 'person':
@@ -86,7 +86,7 @@ def split_data(dataset, split_ratio=0.1, split_type='person'):
             test_data.start_indices = get_indices_for_persons(test_data, test_persons)
             test_data.persons = sorted(test_persons)
 
-        if split_type == 'person_random':
+        if split_type in ['person_random', 'person random']:
             perm = np.random.RandomState(seed=42).permutation(len(train_data.persons))
             perm = [train_data.persons[i] for i in perm]
 

@@ -38,12 +38,9 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
     return np.mean(batch_losses)
 
 
-def validation_loop(dataloader, model, device, loss_fn, attr_pred_fun=None):
+def validation_loop(dataloader, model, device, loss_fn, predict_classes=True):
     # Set to eval mode
     model.eval()
-
-    if attr_pred_fun is not None:
-        sig = torch.nn.Sigmoid()
     
     size = len(dataloader.dataset)
 
@@ -53,31 +50,32 @@ def validation_loop(dataloader, model, device, loss_fn, attr_pred_fun=None):
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
-            y = y.to(device).to(dtype=torch.int64) if str(loss_fn) == 'CrossEntropyLoss()' else y.to(device).to(dtype=torch.float32)
+            y = y.to(device).to(dtype=torch.int64) if predict_classes else y.to(device).to(dtype=torch.float32)
 
             pred = model(X)
             loss = loss_fn(pred, y)
             batch_losses.append(loss.item())
 
             # Getting the binary coded attribute_vector if needed
-            if attr_pred_fun is not None:
-                pred = sig(pred)
-                attr_pred_fun(pred)
+            if not predict_classes:
+                pred = torch.nn.Sigmoid()(pred)
+                # Debugging
+                check_sum = torch.sum(pred).item()
+                pred = predict_attributes(pred)
+                #pred = pred.round()
+                assert torch.sum(pred).item() != check_sum
             else:
                 pred = pred.argmax(dim=1)
-            
+                
             accuracy += sum([int(torch.equal(x, y)) for x, y in zip(y, pred)])
 
     batch_losses = np.array(batch_losses)
     return np.mean(batch_losses), accuracy/size
 
 
-def test_loop(dataloader, model, device, attr_pred_fun=None):
+def test_loop(dataloader, model, device, predict_classes=True):
     # Set to eval mode
     model.eval()
-    
-    if attr_pred_fun is not None:
-        sig = torch.nn.Sigmoid()
 
     predicted_labels = []
     real_labels = []
@@ -89,17 +87,21 @@ def test_loop(dataloader, model, device, attr_pred_fun=None):
             pred = model(X)
 
             # Getting the binary coded attribute_vector if needed
-            if attr_pred_fun is not None:
-                pred = sig(pred)
-                attr_pred_fun(pred)
-                pred = pred.cpu().numpy()
-                real = y.numpy() 
+            if not predict_classes:
+                pred = torch.nn.Sigmoid()(pred)
+                pred = predict_attributes(pred)
+                #pred = pred.round()
+                pred = pred.cpu().numpy().squeeze()
+                real = y.numpy().squeeze()
             else:
                 real = y.item()
                 pred = pred.argmax(dim=1).item()
 
             real_labels.append(real)
             predicted_labels.append(pred)
+
+    logging.info('UNIQUE REAL_LABELS SHAPE = {}'.format(np.unique(np.array(real_labels), axis=0).shape))
+    logging.info('UNIQUE PREDICTIONS SHAPE = {}'.format(np.unique(np.array(predicted_labels), axis=0).shape))
     
     return np.array([real_labels, predicted_labels], dtype=np.int32)
 
@@ -120,15 +122,16 @@ def get_combinations():
     return np.unique(attribute_combinations[:, 1:], axis=0)
 
 
-def predict_attributes(combinations : np.ndarray):
-    def f(t):
-        dists = distance.cdist(t.cpu().numpy(), combinations)
-        dists = torch.from_numpy(dists).to(t.device)
-        min_indices = torch.argmin(dists, dim=1)
-        for idx in range(min_indices.shape[0]):
-            min_combination = combinations[min_indices[idx]]
-            t[idx] = torch.from_numpy(min_combination).to(t.device)
-    return f
+def predict_attributes(t):
+    combinations = get_combinations()
+    dists = distance.cdist(t.cpu().numpy(), combinations)
+    dists = torch.from_numpy(dists).to(t.device)
+    min_indices = torch.argmin(dists, dim=1)
+    t_new = torch.empty_like(t)
+    for idx in range(min_indices.shape[0]):
+        min_combination = combinations[min_indices[idx]]
+        t_new[idx] = torch.from_numpy(min_combination)
+    return t_new.to(device=t.device)
 
 
 def main(run_meta=False):
@@ -200,7 +203,7 @@ def run(config):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
 
     # Set the dataset and data loader
-    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 4}
+    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 2}
     train_dataloader = torch.utils.data.DataLoader(learn_data, **loader_params)
     valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params)
     
@@ -220,13 +223,12 @@ def run(config):
     patience = 0
     last_epoch_acc = 0
     
-    attr_pred_fun = None if predict_classes else predict_attributes(get_combinations())
 
     # Training
     evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
     for epoch in range(max(0, train_cfg['n_epochs'])):
         loss = train_loop(train_dataloader, model, device, loss_fn, optimizer)
-        val_loss, val_acc = validation_loop(valid_dataloader, model, device, loss_fn, attr_pred_fun)
+        val_loss, val_acc = validation_loop(valid_dataloader, model, device, loss_fn, predict_classes)
         
         logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))
 
@@ -246,7 +248,7 @@ def run(config):
             patience = 0
         else:
             patience = 0 if val_acc >= last_epoch_acc else patience + 1
-            if patience >= 3 and epoch >= 10:
+            if patience >= 4 and epoch >= 10:
                 # Stopping after 3 consecutive epochs with descending accuracy
                 logging.info('Early stopping after {:2d} epochs'.format(epoch))
                 break
@@ -265,10 +267,13 @@ def run(config):
     test_dataloader = torch.utils.data.DataLoader(test_data, **loader_params)
 
     logging.info("Testing ...")
-    classifications = test_loop(test_dataloader, model, device, attr_pred_fun)
+    classifications = test_loop(test_dataloader, model, device, predict_classes)
     logging.info("Testing complete!")
 
     np.save(filename_prefix + '_classifications.npy', classifications)
+
+    acc = accuracy_(classifications)
+    logging.info('Accuracy = {:.3f}'.format(acc))
 
     # Saving config
     with open(join(filename_prefix + '_config.json'), "w") as f:
@@ -277,5 +282,14 @@ def run(config):
     logging.info('Run finished!')
 
 
+def accuracy_(classfcn):
+    count = classfcn.shape[1]
+    acc = 0
+    for real, pred in zip(classfcn[0], classfcn[1]):
+        tmp = np.array_equal(real, pred)
+        acc += int(tmp)
+    return acc / count
+
+
 if __name__ == '__main__':
-    main(run_meta=True)
+    main(run_meta=False)

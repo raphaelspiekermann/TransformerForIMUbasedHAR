@@ -19,7 +19,7 @@ def get_model(model_name, input_dim, output_size, window_size):
     if model_name.lower() in ['medium', 'transformer', 'medium_transformer','medium_transformer_encoder']:
         return IMUTransformerEncoder(input_dim, output_size, window_size, 64, 8, 128, 6)
     if model_name.lower() in ['big', 'big_transformer','big_transformer_encoder']:
-        return IMUTransformerEncoder(input_dim, output_size, window_size, 144, 12, 256, 8)
+        return IMUTransformerEncoder(input_dim, output_size, window_size, 128, 8, 256, 6)
     if model_name.lower() in ['raw', 'raw_transformer']:
         return RawIMUTransformerEncoder(input_dim, output_size, window_size, get_nhead(input_dim), 128, 6)
 

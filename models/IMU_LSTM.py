@@ -50,7 +50,7 @@ class IMU_LSTM(nn.Module):
         # Add the position embedding
         src += self.position_embed
         
-        # Transformer Encoder pass
+        # LSTM pass
         target, _ = self.lstm(src)
         target = target[0]
     
