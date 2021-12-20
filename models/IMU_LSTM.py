@@ -15,7 +15,7 @@ class IMU_LSTM(nn.Module):
         self.position_embed = nn.Parameter(torch.randn(window_size + 1, 1, lstm_dim))
         self.cls_token = nn.Parameter(torch.zeros((1, lstm_dim)), requires_grad=True)
 
-        self.lstm = nn.LSTM(lstm_dim, lstm_dim, dropout=0.1, num_layers=6)
+        self.lstm = nn.LSTM(lstm_dim, lstm_dim, dropout=0.1, num_layers=2)
         
         # The linear layer that maps from hidden state space to tag space
         self.imu_head = nn.Sequential(
@@ -29,20 +29,14 @@ class IMU_LSTM(nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        self.fst = True
 
     def __str__(self):
         return 'IMU_LSTM'
 
     def forward(self, src):
-        if self.fst:
-            print(src.shape)
         # Embed in a high dimensional space and reshape to LSTM's expected shape
         src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
-        if self.fst:
-            print(src.shape)
-            self.fst = False
-
+        
         # Prepend class token
         cls_token = self.cls_token.unsqueeze(1).repeat(1, src.shape[1], 1)
         src = torch.cat([cls_token, src])

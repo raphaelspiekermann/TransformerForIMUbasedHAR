@@ -168,6 +168,11 @@ def run(config):
     # Initializing Logger
     run_name = utils.init_logger(dir_path)
     run_folder = join(dir_path, 'runs', run_name)
+    filename_prefix = join(run_folder, run_name)
+    
+    # Saving config
+    with open(join(filename_prefix + '_config.json'), "w") as f:
+        json.dump(config, f, indent=4)
     
     # Initializing Cuda
     device, device_id = utils.init_cuda(config['setup']['device_id'], config['setup']['torch_seed'])
@@ -191,8 +196,8 @@ def run(config):
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
 
     # Preparing training
-    filename_prefix = join(run_folder, run_name)
     train_cfg = config['training']
+
 
     # Set the loss
     loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
@@ -247,9 +252,9 @@ def run(config):
             best_epoch = epoch
             patience = 0
         else:
-            patience = 0 if val_acc >= last_epoch_acc else patience + 1
-            if patience >= 4 and epoch >= 10:
-                # Stopping after 3 consecutive epochs with descending accuracy
+            patience = 0 if epoch < 10 or val_acc >= last_epoch_acc else patience + 1
+            if patience >= 1000 and epoch >= 10:
+                # Stopping after 5 consecutive epochs with decreasing accuracy 
                 logging.info('Early stopping after {:2d} epochs'.format(epoch))
                 break
         
@@ -274,10 +279,6 @@ def run(config):
 
     acc = accuracy_(classifications)
     logging.info('Accuracy = {:.3f}'.format(acc))
-
-    # Saving config
-    with open(join(filename_prefix + '_config.json'), "w") as f:
-        json.dump(config, f, indent=4)
     
     logging.info('Run finished!')
 
