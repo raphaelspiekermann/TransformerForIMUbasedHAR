@@ -122,6 +122,26 @@ def get_combinations():
     return np.unique(attribute_combinations[:, 1:], axis=0)
 
 
+def get_weight_vec(dataloader, n_labels):
+    count = [0] * n_labels
+    n = 0
+    with torch.no_grad():
+        for _,y in dataloader:
+            count[y] += 1
+            n += 1
+    t = torch.tensor(count)
+    print(t)
+    weight_vec = n / t
+    print(weight_vec)
+    weight_vec /= torch.min(weight_vec)
+    print(weight_vec)
+    weight_vec.apply_(lambda x: min(20, x))
+    print(weight_vec)
+    return weight_vec
+
+
+
+
 def predict_attributes(t):
     combinations = get_combinations()
     dists = distance.cdist(t.cpu().numpy(), combinations)
@@ -200,7 +220,10 @@ def run(config):
 
 
     # Set the loss
-    loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
+    n_labels = model.output_dim
+    weight_vec = get_weight_vec(train_data, n_labels).to(device)
+    print(weight_vec)
+    loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
 
     # Set the optimizer and scheduler
@@ -247,7 +270,7 @@ def run(config):
 
         # Update best model yet
         if val_acc >= best_model_acc:
-            best_model_state = copy.copy(model.state_dict())
+            best_model_state = copy.deepcopy(model.state_dict())
             best_model_acc = val_acc
             best_epoch = epoch
             patience = 0
