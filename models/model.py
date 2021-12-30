@@ -22,6 +22,8 @@ def get_model(model_name, input_dim, output_size, window_size):
         return IMUTransformerEncoder(input_dim, output_size, window_size, 128, 8, 256, 6)
     if model_name.lower() in ['raw', 'raw_transformer']:
         return RawIMUTransformerEncoder(input_dim, output_size, window_size, get_nhead(input_dim), 128, 6)
+    if model_name.lower() in ['lara_transformer']:
+        return IMUTransformerEncoder(input_dim, output_size, window_size, 256, 32, 512, 6)
 
     # RNNs
     if model_name.lower()=='lstm':

@@ -21,7 +21,7 @@ class RawIMUTransformerEncoder(nn.Module):
                                               norm = nn.LayerNorm(self.transformer_dim))
         self.cls_token = nn.Parameter(torch.zeros((1, self.transformer_dim)), requires_grad=True)
 
-        self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim))
+        self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim), requires_grad=True)
 
         self.imu_head = nn.Sequential(
             nn.LayerNorm(self.transformer_dim),
@@ -29,7 +29,6 @@ class RawIMUTransformerEncoder(nn.Module):
             nn.GELU(),
             nn.Dropout(0.1),
             nn.Linear(self.transformer_dim//4, output_dim))
-
 
         # init
         for p in self.parameters():

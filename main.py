@@ -140,8 +140,6 @@ def get_weight_vec(dataloader, n_labels):
     return weight_vec
 
 
-
-
 def predict_attributes(t):
     combinations = get_combinations()
     dists = distance.cdist(t.cpu().numpy(), combinations)
@@ -220,10 +218,11 @@ def run(config):
 
 
     # Set the loss
-    n_labels = model.output_dim
+    n_labels = out_size_
     weight_vec = get_weight_vec(train_data, n_labels).to(device)
     print(weight_vec)
-    loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
+    #loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
+    loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
 
     # Set the optimizer and scheduler
@@ -231,7 +230,7 @@ def run(config):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
 
     # Set the dataset and data loader
-    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 2}
+    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 4}
     train_dataloader = torch.utils.data.DataLoader(learn_data, **loader_params)
     valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params)
     
