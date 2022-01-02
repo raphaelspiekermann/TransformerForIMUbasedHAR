@@ -218,9 +218,9 @@ def run(config):
 
 
     # Set the loss
-    n_labels = out_size_
-    weight_vec = get_weight_vec(train_data, n_labels).to(device)
-    print(weight_vec)
+    #n_labels = out_size_
+    #weight_vec = get_weight_vec(train_data, n_labels).to(device)
+    #print(weight_vec)
     #loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
     loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
