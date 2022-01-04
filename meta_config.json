@@ -1,7 +1,7 @@
 {
-	"model_name": ["lara_cnn", "transformer", "lstm"],
-	"normalize": [false, true],
-	"split_type": ["person", "person_random"],
-	"window_size": [24, 50, 100],	
+	"model_name": ["lstm", "transformer", "small", "lara", "baseline"],
+	"normalize": [true],
+	"split_type": ["person"],
+	"window_size": [100],	
 	"torch_seed": [0, 42, 1337]
 }

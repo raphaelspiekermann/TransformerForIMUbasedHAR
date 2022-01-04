@@ -2,7 +2,7 @@
     "data": {
         "model_name": "transformer",
         "dataset": "lara",
-        "classification_type": "attributes",
+        "classification_type": "classes",
         "normalize": true,
         "window_size": 100,
         "window_shift": 1,
@@ -20,7 +20,7 @@
         "n_epochs": 60
     },
     "setup": {
-        "dir_path": "INSERT_DIRECTORY_PATH_HERE",
+        "dir_path": "/data/rspieker/experiment2_classes",
         "torch_seed": 0,
         "device_id": "cuda:1"
 	}

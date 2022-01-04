@@ -226,11 +226,11 @@ def run(config):
     train_cfg = config['training']
 
     # Set the loss
-    n_labels = out_size_
-    weight_vec = get_weight_vec(train_data, n_labels).to(device)
-    logging.info('Weights = {}'.format(weight_vec))
-    loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
-    # loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
+    #n_labels = out_size_
+    #weight_vec = get_weight_vec(train_data, n_labels).to(device)
+    #logging.info('Weights = {}'.format(weight_vec))
+    #loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
+    loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
 
     # Set the optimizer and scheduler
@@ -324,4 +324,4 @@ def accuracy_(classfcn):
 
 
 if __name__ == '__main__':
-    main(run_meta=False)
+    main(run_meta=True)
