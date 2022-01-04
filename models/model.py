@@ -6,7 +6,7 @@ from .LARa_TCNN import Lara_TCNN
 import logging
 
 
-def get_model(model_name, input_dim, output_size, window_size): 
+def get_model(model_name, input_dim, output_size, window_size):
     # CNNs
     if model_name=='baseline':
         return IMUCLSBaseline(input_dim, output_size, window_size)
@@ -14,16 +14,14 @@ def get_model(model_name, input_dim, output_size, window_size):
         return Lara_TCNN(input_dim, output_size, 6, window_size)
 
     # Transformers
-    if model_name.lower() in ['small', 'small_transformer','small_transformer_encoder']:
+    if model_name.lower() in ['small', 'small_transformer']:
         return IMUTransformerEncoder(input_dim, output_size, window_size, 32, 4, 64, 4)
-    if model_name.lower() in ['medium', 'transformer', 'medium_transformer','medium_transformer_encoder']:
+    if model_name.lower() in ['medium', 'transformer', 'medium_transformer']:
         return IMUTransformerEncoder(input_dim, output_size, window_size, 64, 8, 128, 6)
-    if model_name.lower() in ['big', 'big_transformer','big_transformer_encoder']:
+    if model_name.lower() in ['big', 'big_transformer']:
         return IMUTransformerEncoder(input_dim, output_size, window_size, 128, 8, 256, 6)
     if model_name.lower() in ['raw', 'raw_transformer']:
         return RawIMUTransformerEncoder(input_dim, output_size, window_size, get_nhead(input_dim), 128, 6)
-    if model_name.lower() in ['lara_transformer']:
-        return IMUTransformerEncoder(input_dim, output_size, window_size, 256, 32, 512, 6)
 
     # RNNs
     if model_name.lower()=='lstm':

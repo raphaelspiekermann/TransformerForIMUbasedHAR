@@ -15,7 +15,7 @@ class IMU_LSTM(nn.Module):
         self.position_embed = nn.Parameter(torch.randn(window_size + 1, 1, lstm_dim))
         self.cls_token = nn.Parameter(torch.zeros((1, lstm_dim)), requires_grad=True)
 
-        self.lstm = nn.LSTM(lstm_dim, lstm_dim, dropout=0.1, num_layers=2)
+        self.lstm = nn.LSTM(lstm_dim, lstm_dim, dropout=0.1, num_layers=4)
         
         # The linear layer that maps from hidden state space to tag space
         self.imu_head = nn.Sequential(

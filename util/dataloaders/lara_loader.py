@@ -17,7 +17,7 @@ def load(path_to_data, classification_type='attributes'):
     if load_attributes:
         label_dict = None
     else:
-        label_dict = {0:'Standing', 1:'Walking', 2:'Cart', 3:'Handling(up)', 4:'Handling(ctr)', 5:'Handling(down)', 6:'Synchronization', 7:'None'} 
+        label_dict = {0:'Standing', 1:'Walking', 2:'Cart', 3:'Handling(up)', 4:'Handling(cntr)', 5:'Handling(down)', 6:'Synchronization', 7:'None'} 
 
     features = np.zeros((0,30), dtype=np.float64)
     labels = np.zeros((0, 19 if load_attributes else 1), dtype=np.int64)

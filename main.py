@@ -1,10 +1,11 @@
 import copy
 import json
+import re
 import torch
 import pandas as pd
 import numpy as np
 import logging
-from util import utils
+from util import utils, eval
 import os
 from util.dataloader import get_data, split_data
 from os.path import join
@@ -135,8 +136,10 @@ def get_weight_vec(dataloader, n_labels):
     print(weight_vec)
     weight_vec /= torch.min(weight_vec)
     print(weight_vec)
-    weight_vec.apply_(lambda x: min(20, x))
+    norm = torch.linalg.norm(weight_vec)
+    weight_vec *= n_labels / norm
     print(weight_vec)
+    
     return weight_vec
 
 
@@ -150,7 +153,7 @@ def predict_attributes(t):
         min_combination = combinations[min_indices[idx]]
         t_new[idx] = torch.from_numpy(min_combination)
     return t_new.to(device=t.device)
-
+    
 
 def main(run_meta=False):
     # Reading config.json
@@ -174,10 +177,16 @@ def main(run_meta=False):
                             run_cfg['data']['window_size'] = window_size
                             run_cfg['data']['split_type'] = split_type
                             run_cfg['setup']['torch_seed'] = torch_seed
-
+                            
                             run(run_cfg)
     else:
-        run(config)
+        filename_prefix, classifications, label_dict = run(config)
+        if config['data']['classification_type'] == 'classes':
+            real_labels = classifications[0]
+            pred_labels = classifications[1]
+            labels = list(label_dict.keys())
+            path = filename_prefix + '_heatmap.png'
+            eval.create_heatmap(real_labels, pred_labels, labels, label_dict, file_name=path)
 
 
 def run(config):
@@ -208,7 +217,7 @@ def run(config):
     in_dim_ = train_data.imu.shape[1]
     out_size_ = len(label_dict) if predict_classes else train_data.labels.shape[1]
     win_size_ = train_data.window_size
-            
+    
     model = model_loader.get_model(model_name_, in_dim_, out_size_, win_size_).to(device)
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
@@ -216,13 +225,12 @@ def run(config):
     # Preparing training
     train_cfg = config['training']
 
-
     # Set the loss
-    #n_labels = out_size_
-    #weight_vec = get_weight_vec(train_data, n_labels).to(device)
-    #print(weight_vec)
-    #loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
-    loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
+    n_labels = out_size_
+    weight_vec = get_weight_vec(train_data, n_labels).to(device)
+    logging.info('Weights = {}'.format(weight_vec))
+    loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
+    # loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
 
     # Set the optimizer and scheduler
@@ -268,7 +276,7 @@ def run(config):
         scheduler.step()
 
         # Update best model yet
-        if val_acc >= best_model_acc:
+        if val_acc > best_model_acc:
             best_model_state = copy.deepcopy(model.state_dict())
             best_model_acc = val_acc
             best_epoch = epoch
@@ -303,6 +311,7 @@ def run(config):
     logging.info('Accuracy = {:.3f}'.format(acc))
     
     logging.info('Run finished!')
+    return filename_prefix, classifications, label_dict
 
 
 def accuracy_(classfcn):
