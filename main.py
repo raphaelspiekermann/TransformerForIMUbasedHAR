@@ -1,13 +1,14 @@
 import copy
 import json
-import re
+import math
 import torch
 import pandas as pd
 import numpy as np
 import logging
-from util import utils, eval
+from util import utils
 import os
 from util.dataloader import get_data, split_data
+import eval.eval as eval
 from os.path import join
 import models.model as  model_loader
 from scipy.spatial import distance
@@ -31,7 +32,7 @@ def train_loop(dataloader, model, device, loss_fn, optimizer):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
+        
         # Collect for recoding and plotting
         batch_losses.append(loss.item())
 
@@ -123,24 +124,32 @@ def get_combinations():
     return np.unique(attribute_combinations[:, 1:], axis=0)
 
 
-def get_weight_vec(dataloader, n_labels):
+def get_weight_vec(dataset, n_labels):
     count = [0] * n_labels
-    n = 0
-    with torch.no_grad():
-        for _,y in dataloader:
-            count[y] += 1
-            n += 1
+    N = 0
+    for _,y in dataset:
+        count[y] += 1
+        N += 1
+    assert N == len(dataset)
     t = torch.tensor(count)
-    print(t)
-    weight_vec = n / t
-    print(weight_vec)
-    weight_vec /= torch.min(weight_vec)
-    print(weight_vec)
+    weight_vec = N / t
     norm = torch.linalg.norm(weight_vec)
     weight_vec *= n_labels / norm
-    print(weight_vec)
-    
     return weight_vec
+
+
+def get_pos_weight_vec(dataset):
+    count = torch.zeros(19)
+    N = 0
+    for _,y in dataset:
+        count += y
+        N += 1
+    assert N == len(dataset)
+    print([x.item() for x in count])
+    weight_vec = [(N - x.item()) / x.item() for x in count]
+    weight_vec = [min(25, x) for x in weight_vec]
+    print(weight_vec)
+    return torch.tensor(weight_vec)
 
 
 def predict_attributes(t):
@@ -153,40 +162,6 @@ def predict_attributes(t):
         min_combination = combinations[min_indices[idx]]
         t_new[idx] = torch.from_numpy(min_combination)
     return t_new.to(device=t.device)
-    
-
-def main(run_meta=False):
-    # Reading config.json
-    config, meta_config = read_config()
-    dir_path = config['setup']['dir_path']
-
-    # Initializing Directory
-    utils.init_dir_structure(dir_path)
-
-    if run_meta:
-        # Iterating over all Settings:
-        for model_name in meta_config['model_name']:
-            for normalize in meta_config['normalize']:
-                for window_size in meta_config['window_size']:
-                    for split_type in meta_config['split_type']:
-                        for torch_seed in meta_config['torch_seed']:
-                            run_cfg = copy.copy(config)
-                                    
-                            run_cfg['data']['model_name'] = model_name
-                            run_cfg['data']['normalize'] = normalize
-                            run_cfg['data']['window_size'] = window_size
-                            run_cfg['data']['split_type'] = split_type
-                            run_cfg['setup']['torch_seed'] = torch_seed
-                            
-                            run(run_cfg)
-    else:
-        filename_prefix, classifications, label_dict = run(config)
-        if config['data']['classification_type'] == 'classes':
-            real_labels = classifications[0]
-            pred_labels = classifications[1]
-            labels = list(label_dict.keys())
-            path = filename_prefix + '_heatmap.png'
-            eval.create_heatmap(real_labels, pred_labels, labels, label_dict, file_name=path)
 
 
 def run(config):
@@ -226,11 +201,18 @@ def run(config):
     train_cfg = config['training']
 
     # Set the loss
-    #n_labels = out_size_
-    #weight_vec = get_weight_vec(train_data, n_labels).to(device)
-    #logging.info('Weights = {}'.format(weight_vec))
-    #loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec) if predict_classes else torch.nn.BCEWithLogitsLoss()
-    loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
+    if train_cfg['use_weights_on_loss']:
+        if predict_classes:
+            n_labels = out_size_
+            weight_vec = get_weight_vec(train_data, n_labels).to(device)
+            logging.info('Weights = {}'.format([x.item() for x in weight_vec]))
+            loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec)
+        else:
+            pos_weight_vec = get_pos_weight_vec(train_data).to(device)
+            logging.info('Pos_Weights = {}'.format([x.item() for x in pos_weight_vec]))
+            loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight_vec)
+    else:
+        loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
     logging.info('Loss = {}'.format(loss_fn))
 
     # Set the optimizer and scheduler
@@ -250,14 +232,14 @@ def run(config):
     val_acc_prog = []
     
     # Best Model
-    best_model_state = copy.copy(model.state_dict())
+    best_model_state = copy.deepcopy(model.state_dict())
     best_model_acc = 0
     best_epoch = 0
 
     # Patience
+    last_epoch_loss = math.inf
     patience = 0
-    last_epoch_acc = 0
-    
+    use_early_stopping = train_cfg['early_stopping']
 
     # Training
     evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
@@ -275,20 +257,21 @@ def run(config):
         # Update scheduler
         scheduler.step()
 
+        # Update on early stopping
+        patience = 0 if val_loss < last_epoch_loss else patience + 1
+        last_epoch_loss = val_loss
+        
         # Update best model yet
         if val_acc > best_model_acc:
             best_model_state = copy.deepcopy(model.state_dict())
             best_model_acc = val_acc
             best_epoch = epoch
-            patience = 0
-        else:
-            patience = 0 if epoch < 10 or val_acc >= last_epoch_acc else patience + 1
-            if patience >= 1000 and epoch >= 10:
-                # Stopping after 5 consecutive epochs with decreasing accuracy 
-                logging.info('Early stopping after {:2d} epochs'.format(epoch))
-                break
-        
-        last_epoch_acc = val_acc
+    
+        # Stopping after 5 consecutive epochs with decreasing accuracy 
+        if use_early_stopping and patience >= 5 and epoch >= 10:
+            logging.info('Early stopping after {:2d} epochs'.format(epoch))
+            break
+    
     
     logging.info('Most successful epoch = {:2d}'.format(best_epoch))
     model.load_state_dict(best_model_state)
@@ -323,5 +306,39 @@ def accuracy_(classfcn):
     return acc / count
 
 
+def main(run_meta=False):
+    # Reading config.json
+    config, meta_config = read_config()
+    dir_path = config['setup']['dir_path']
+
+    # Initializing Directory
+    utils.init_dir_structure(dir_path)
+
+    if run_meta:
+        # Iterating over all Settings:
+        for model_name in meta_config['model_name']:
+            for normalize in meta_config['normalize']:
+                for window_size in meta_config['window_size']:
+                    for split_type in meta_config['split_type']:
+                        for torch_seed in meta_config['torch_seed']:
+                            run_cfg = copy.copy(config)
+                                    
+                            run_cfg['data']['model_name'] = model_name
+                            run_cfg['data']['normalize'] = normalize
+                            run_cfg['data']['window_size'] = window_size
+                            run_cfg['data']['split_type'] = split_type
+                            run_cfg['setup']['torch_seed'] = torch_seed
+                            
+                            run(run_cfg)
+    else:
+        filename_prefix, classifications, label_dict = run(config)
+        if config['data']['classification_type'] == 'classes':
+            real_labels = classifications[0]
+            pred_labels = classifications[1]
+            labels = list(label_dict.keys())
+            path = filename_prefix + '_heatmap.png'
+            eval.create_heatmap(real_labels, pred_labels, labels, label_dict, file_name=path)
+
+
 if __name__ == '__main__':
-    main(run_meta=True)
+    main(run_meta=False)
