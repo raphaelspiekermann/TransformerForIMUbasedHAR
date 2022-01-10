@@ -224,7 +224,7 @@ def run(config):
     # Set the dataset and data loader
     loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 4}
     train_dataloader = torch.utils.data.DataLoader(learn_data, **loader_params)
-    valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params)
+    valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params) if len(validation_data) > 0 else None
     
     logging.info("Training ...")
 
@@ -242,6 +242,14 @@ def run(config):
     evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
     for epoch in range(max(0, train_cfg['n_epochs'])):
         loss = train_loop(train_dataloader, model, device, loss_fn, optimizer)
+        
+        if valid_dataloader is None:
+            logging.info('Epoch[{:02d}]: Loss = {:.3f}'.format(epoch, loss))
+            scheduler.step()
+            best_model_state = copy.deepcopy(model.state_dict())
+            best_epoch = epoch
+            continue
+        
         val_loss, val_acc = validation_loop(valid_dataloader, model, device, loss_fn, predict_classes)
         
         logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))

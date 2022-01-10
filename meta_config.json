@@ -1,7 +1,7 @@
 {
-	"model_name": ["lstm", "transformer", "small", "lara", "baseline"],
+	"model_name": ["transformer", "small", "raw", "lara_cnn", "baseline"],
 	"normalize": [true],
 	"split_type": ["person"],
-	"window_size": [100],	
+	"window_size": [100, 74, 50, 24],	
 	"torch_seed": [0, 42, 1337]
 }

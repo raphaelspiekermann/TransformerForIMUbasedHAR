@@ -52,8 +52,8 @@ def normalize_data(data):
     return data + 0.01 * torch.randn(data.shape).numpy()
 
 
-def split_data(dataset, split_ratio=0.1, split_type='person'):
-        split_ratio = split_ratio if 0 < split_ratio <= 1 else 0.1
+def split_data(dataset, split_ratio, split_type='person'):
+        split_ratio = split_ratio if 0 <= split_ratio <= 1 else 0.1
         split_ratio = 1 - split_ratio
 
         train_data = dataset
