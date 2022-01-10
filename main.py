@@ -1,6 +1,5 @@
 import copy
 import json
-import math
 import torch
 import pandas as pd
 import numpy as np
@@ -8,10 +7,10 @@ import logging
 from util import utils
 import os
 from util.dataloader import get_data, split_data
-import eval.eval as eval
 from os.path import join
 import models.model as  model_loader
 from scipy.spatial import distance
+import sklearn.metrics
 
 
 def train_loop(dataloader, model, device, loss_fn, optimizer):
@@ -82,6 +81,8 @@ def test_loop(dataloader, model, device, predict_classes=True):
     predicted_labels = []
     real_labels = []
 
+    fst = True
+    
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device).to(dtype=torch.float32)
@@ -119,8 +120,8 @@ def read_config():
 
 def get_combinations():
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    attribute_combinations = pd.read_csv(join(__location__, 'attr_per_class_dataset.csv'))
-    attribute_combinations = np.array(attribute_combinations)
+    attribute_combinations = pd.read_csv(join(__location__, 'attr_per_class_dataset.csv'), header=None)
+    attribute_combinations = np.array(attribute_combinations)    
     return np.unique(attribute_combinations[:, 1:], axis=0)
 
 
@@ -194,6 +195,7 @@ def run(config):
     win_size_ = train_data.window_size
     
     model = model_loader.get_model(model_name_, in_dim_, out_size_, win_size_).to(device)
+        
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
 
@@ -236,11 +238,6 @@ def run(config):
     best_model_acc = 0
     best_epoch = 0
 
-    # Patience
-    last_epoch_loss = math.inf
-    patience = 0
-    use_early_stopping = train_cfg['early_stopping']
-
     # Training
     evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
     for epoch in range(max(0, train_cfg['n_epochs'])):
@@ -256,23 +253,13 @@ def run(config):
     
         # Update scheduler
         scheduler.step()
-
-        # Update on early stopping
-        patience = 0 if val_loss < last_epoch_loss else patience + 1
-        last_epoch_loss = val_loss
         
         # Update best model yet
         if val_acc > best_model_acc:
             best_model_state = copy.deepcopy(model.state_dict())
             best_model_acc = val_acc
             best_epoch = epoch
-    
-        # Stopping after 5 consecutive epochs with decreasing accuracy 
-        if use_early_stopping and patience >= 5 and epoch >= 10:
-            logging.info('Early stopping after {:2d} epochs'.format(epoch))
-            break
-    
-    
+
     logging.info('Most successful epoch = {:2d}'.format(best_epoch))
     model.load_state_dict(best_model_state)
     logging.info('Training done!')
@@ -289,14 +276,20 @@ def run(config):
     logging.info("Testing complete!")
 
     np.save(filename_prefix + '_classifications.npy', classifications)
-
+    
+    if predict_classes:
+        confusion_matr = sklearn.metrics.confusion_matrix(classifications[0], classifications[1])
+        logging.info('Confusion_matrix:\n {}'.format(confusion_matr))
+        
+        l = [label_dict[idx] for idx in range(len(label_dict))]
+        classification_report = sklearn.metrics.classification_report(classifications[0], classifications[1], target_names=l, zero_division=0)
+        logging.info('Classification_report:\n{}'.format(classification_report))
+    
     acc = accuracy_(classifications)
     logging.info('Accuracy = {:.3f}'.format(acc))
-    
     logging.info('Run finished!')
-    return filename_prefix, classifications, label_dict
 
-
+   
 def accuracy_(classfcn):
     count = classfcn.shape[1]
     acc = 0
@@ -306,14 +299,15 @@ def accuracy_(classfcn):
     return acc / count
 
 
-def main(run_meta=False):
+def main():
     # Reading config.json
     config, meta_config = read_config()
     dir_path = config['setup']['dir_path']
+    run_meta = config['setup']['run_meta']
 
     # Initializing Directory
     utils.init_dir_structure(dir_path)
-
+    
     if run_meta:
         # Iterating over all Settings:
         for model_name in meta_config['model_name']:
@@ -321,7 +315,7 @@ def main(run_meta=False):
                 for window_size in meta_config['window_size']:
                     for split_type in meta_config['split_type']:
                         for torch_seed in meta_config['torch_seed']:
-                            run_cfg = copy.copy(config)
+                            run_cfg = copy.deep_copy(config)
                                     
                             run_cfg['data']['model_name'] = model_name
                             run_cfg['data']['normalize'] = normalize
@@ -331,14 +325,9 @@ def main(run_meta=False):
                             
                             run(run_cfg)
     else:
-        filename_prefix, classifications, label_dict = run(config)
-        if config['data']['classification_type'] == 'classes':
-            real_labels = classifications[0]
-            pred_labels = classifications[1]
-            labels = list(label_dict.keys())
-            path = filename_prefix + '_heatmap.png'
-            eval.create_heatmap(real_labels, pred_labels, labels, label_dict, file_name=path)
+        run(config)
 
 
 if __name__ == '__main__':
-    main(run_meta=False)
+    main()
+    

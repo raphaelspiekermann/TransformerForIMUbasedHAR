@@ -130,6 +130,7 @@ dmypy.json
 
 
 # generated Files
+eval/
 .csv
 config.json
 .config.json

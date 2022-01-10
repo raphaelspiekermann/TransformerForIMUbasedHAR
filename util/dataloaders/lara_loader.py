@@ -29,6 +29,7 @@ def load(path_to_data, classification_type='attributes'):
         os.rename(join(path_to_data, 'data', 'IMU data'), join(path_to_data, 'data', 'lara'))
     logging.info('Loading data from {}.'.format(path))
 
+    
     for dir in directories:
         for sc in scenarios:
             for rec in recordings:

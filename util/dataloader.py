@@ -5,29 +5,20 @@ from torch.utils.data import Dataset
 import numpy as np
 from .dataloaders.lara_loader import load as lara_load
 from .dataloaders.motionsense_loader import load as motionsense_load
-from .dataloaders.orderpicking_loader import load as orderpicking_load
+
 
 class IMUDataset(Dataset):
-    """
-        A class representing a dataset for IMU learning tasks
-    """
     def __init__(self, features, labels, infos, window_size, window_shift, normalize):
         super(IMUDataset, self).__init__()
         
-        if window_shift > 0:
-            if window_shift < 1:
-                window_shift = max(1, int(window_size * window_shift))
-            else:
-                window_shift = min(window_shift, window_size)
-        else:
-            raise 'Window_shift {} isnt valid'.format(window_shift)
+        window_shift = max(1, min(window_shift, window_size))
 
         n = labels.shape[0]
         tmp_start_indices = list(range(0, n - window_size + 1, window_shift))
 
         #Including only Windows that come from the same recording
-        self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[min(x+window_size, infos.shape[0]-1)]), tmp_start_indices))
-
+        self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[x+window_size]), tmp_start_indices))
+        
         logging.info('N_samples = {}'.format(n))
         logging.info('N_windows = {}'.format(len(self.start_indices)))
         logging.info('Window_size = {}'.format(window_size))
@@ -38,7 +29,6 @@ class IMUDataset(Dataset):
         self.infos = infos
         self.persons = sorted(np.unique(infos[:,0]))
         self.window_size = window_size
-            
 
     def __len__(self):
         return len(self.start_indices)
