@@ -14,7 +14,7 @@ class IMUDataset(Dataset):
         window_shift = max(1, min(window_shift, window_size))
 
         n = labels.shape[0]
-        tmp_start_indices = list(range(0, n - window_size + 1, window_shift))
+        tmp_start_indices = list(range(0, n - window_size, window_shift))
 
         #Including only Windows that come from the same recording
         self.start_indices = list(filter(lambda x : np.array_equal(infos[x], infos[x+window_size]), tmp_start_indices))
