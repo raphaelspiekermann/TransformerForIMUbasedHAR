@@ -42,10 +42,14 @@ def init_dir_structure(data_path):
  
 
 def init_configs(root_path):
+    x = 0
     if not isfile(join(root_path, 'config.json')):
         generate_example_config(root_path)
+        x -= 1
     if not isfile(join(root_path, 'meta_config.json')):
         generate_example_meta_config(root_path)
+        x -= 1
+    return x
     
 
 def init_cuda(device_id, torch_seed):
@@ -94,7 +98,7 @@ def generate_example_config(path):
             "n_epochs": 30
         },
         "setup": {
-            "dir_path": "ADD_PATH_HERE",
+            "dir_path": "ADD PATH HERE - or run with --path argument",
             "torch_seed": 0,
             "device_id": "cpu"
         }

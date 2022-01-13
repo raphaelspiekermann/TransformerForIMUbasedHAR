@@ -1,7 +1,7 @@
 {
-	"model_name": ["transformer", "small", "raw", "lara_cnn", "baseline"],
-	"normalize": [true],
-	"split_type": ["person"],
-	"window_size": [100, 74, 50, 24],	
-	"torch_seed": [0, 42, 1337]
+    "model_name": [],
+    "normalize": [],
+    "window_size": [],
+    "split_type": [],
+    "torch_seed": []
 }

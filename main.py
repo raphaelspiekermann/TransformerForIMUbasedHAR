@@ -115,7 +115,7 @@ def test_loop(dataloader, model, device, predict_classes=True):
     return np.array([real_labels, predicted_labels], dtype=np.int32)
 
 
-def run(config):
+def run_experiment(config):
     dir_path = config['setup']['dir_path']
 
     # Initializing Logger
@@ -239,44 +239,50 @@ def run(config):
     logging.info('Run finished!')
 
 
-
-def main():    
+def main():
     root_path = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     
-    # Checking for config-files
-    utils.init_configs(root_path)
+    # Creating configs if needed
+    if (utils.init_configs(root_path)) < 0 :
+        raise Warning('Files config.json and/or meta_config.json have/has been generated. Please set them up as needed and run again!')
     
     # Reading config.json
     config, meta_config = read_config(root_path)
     
-    # Parsing arguments
+    # Adding arguments
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('run_meta', help='[Y/N]')
-    arg_parser.add_argument('--path', default=None, help='Path to a root-folder for storing datasets and experiments')
+    arg_parser.add_argument('--run_meta', default='n', help='Want to run the meta_config? [y/n]')
+    arg_parser.add_argument('--path', default=None, help='Path to a folder/directory for storing datasets & experiments - overwrites the previously specified path inside the config.')
     
+    # Parsing arguments
     args = arg_parser.parse_args()
-    # Evaluating arguments
-    if args.run_meta.upper() not in ['Y', 'N']:
-        raise ValueError('run_meta argument only accepts flags [Y/N].')
-    else:
-        run_meta = args.run_meta.upper() == 'Y'
     
-    read_dir_path = args.path
-    if read_dir_path is not None and os.path.isdir(read_dir_path):
-        dir_path = read_dir_path
-        config['setup']['dir_path'] = read_dir_path
-        with open(join(root_path, 'config.json'), "w") as f:
-            json.dump(config, f, indent=4)
+    # Evaluating the arguments
+    # 1) Specifies if the meta_config should be ran or only the default config
+    if args.run_meta not in ['y','n']:
+        raise ValueError('--run_meta argument only accepts flags [y/n].')
+    elif args.run_meta == 'y':
+            assert os.path.isfile(join(root_path, 'meta_config.json'))
     
-    # Initializing Directory
+    # 2) New path for storing datasets and experiment results
+    new_dir_path = args.path
+    if new_dir_path is not None:
+        if os.path.isdir(new_dir_path):
+            config['setup']['dir_path'] = new_dir_path
+            with open(join(root_path, 'config.json'), "w") as f:
+                json.dump(config, f, indent=4)
+        else:
+            raise ValueError('Directory "{}" from the --path argument does not exist.'.format(new_dir_path))
+    
+    # Initializing Directory    
     dir_path = config['setup']['dir_path']
     if not os.path.isdir(dir_path):
-        raise ValueError('Directory {} does not exist --> Check config.json or the --path argument.'.format(dir_path))
+        raise ValueError('Directory "{}" does not exist -> check config.json or use the --path argument.'.format(dir_path))
     utils.init_dir_structure(dir_path)
-
     
-    # Running all possible combinations
-    if run_meta:
+    
+    # Starting the run(s)    
+    if args.run_meta.upper() == 'Y':
         # Iterating over all Settings:
         for model_name in meta_config['model_name']:
             for normalize in meta_config['normalize']:
@@ -291,11 +297,16 @@ def main():
                             run_cfg['data']['split_type'] = split_type
                             run_cfg['setup']['torch_seed'] = torch_seed
                             
-                            run(run_cfg)
+                            run_experiment(run_cfg)
     else:
         # Running only the specified run of config.json
-        run(config)
+        run_experiment(config)
     
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except ValueError as v:
+        print(v)
+    except Warning as w:
+        print(w)
