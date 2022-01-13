@@ -133,7 +133,5 @@ dmypy.json
 eval/
 .csv
 config.json
-.config.json
-/config.json
-config
+meta_config.json
 

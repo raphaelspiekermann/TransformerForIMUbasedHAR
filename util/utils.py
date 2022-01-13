@@ -2,12 +2,11 @@ import logging
 import logging.config
 import PIL
 import json
-from os.path import join, exists, split, realpath
+from os.path import join, exists, split, realpath, isfile
 import time
 from os import mkdir, remove
 import torch
 import urllib.request
-from tqdm import tqdm
 import zipfile
 
 
@@ -33,42 +32,87 @@ def init_logger(dir_path):
         return run_name
 
 
-def init_dir_structure(path):
-    parent_dir = split(path)[0]
-    dir_name = split(path)[1]
+def init_dir_structure(data_path):
+    parent_dir = split(data_path)[0]
+    dir_name = split(data_path)[1]
     create_dir(parent_dir, dir_name)
     data_dir = join(parent_dir, dir_name)
     create_dir(data_dir, 'runs')
     create_dir(data_dir, 'data')
+ 
 
+def init_configs(root_path):
+    if not isfile(join(root_path, 'config.json')):
+        generate_example_config(root_path)
+    if not isfile(join(root_path, 'meta_config.json')):
+        generate_example_meta_config(root_path)
+    
 
-def init_cuda(device_id_cfg, torch_seed):
-    use_cuda = torch.cuda.is_available()
-    device_id = 'cpu'
+def init_cuda(device_id, torch_seed):
     torch.random.manual_seed(torch_seed)
-    if use_cuda:
+    if torch.cuda.is_available():
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        device_id = device_id_cfg
-    return torch.device(device_id), device_id
-
-
-class DownloadProgressBar(tqdm):
-    def update_to(self, b=1, bsize=1, tsize=None):
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
+    else:
+        device_id = 'cpu'
+    return torch.device(device_id)
 
 
 def download_url(url, output_path, tmp_path=None, extract_archive=False):
     logging.info('Downloading from {}'.format(url))
     filename = tmp_path if extract_archive else output_path
-    with DownloadProgressBar(unit='B', unit_scale=True,
-                             miniters=1, desc=url.split('/')[-1]) as t:
-        tmp_path, _ = urllib.request.urlretrieve(url, filename, reporthook=t.update_to)
+    tmp_path, _ = urllib.request.urlretrieve(url, filename)
     logging.info('File stored at {}'.format(filename))
     if extract_archive:
         logging.info('Extracting {} to {}'.format(tmp_path, output_path))
         with zipfile.ZipFile(tmp_path) as myZip:
             myZip.extractall(output_path)
         remove(tmp_path)
+
+
+def generate_example_config(path):
+    config = {
+        "data": {
+            "model_name": "transformer",
+            "dataset": "lara",
+            "classification_type": "classes",
+            "normalize": True,
+            "window_size": 100,
+            "window_shift": 5,
+            "test_size": 0.15,
+            "validation_size": 0.25,
+            "split_type": "person"
+        },
+        "training": {
+            "use_weights_on_loss": False,
+            "batch_size": 128,
+            "lr": 1e-4,
+            "weight_decay": 1e-4,
+            "eps": 1e-10,
+            "lr_scheduler_step_size": 5,
+            "lr_scheduler_gamma": 0.5,
+            "n_epochs": 30
+        },
+        "setup": {
+            "dir_path": "ADD_PATH_HERE",
+            "torch_seed": 0,
+            "device_id": "cpu"
+        }
+    }
+    
+    path = join(path, 'config.json')
+    with open(path, "w") as f:
+        json.dump(config, f, indent=4)
+
+
+def generate_example_meta_config(path):
+    meta_config = {
+	"model_name": [],
+	"normalize": [],
+	"window_size": [],	
+	"split_type": [],
+	"torch_seed": []
+    }
+    path = join(path, 'meta_config.json')
+    with open(path, "w") as f:
+        json.dump(meta_config, f, indent=4)

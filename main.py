@@ -1,16 +1,24 @@
 import copy
 import json
+import argparse
 import torch
-import pandas as pd
 import numpy as np
 import logging
 from util import utils
-import os
-from util.dataloader import get_data, split_data
+from data.dataloader import retrieve_dataloaders
 from os.path import join
 import models.model as  model_loader
-from scipy.spatial import distance
 import sklearn.metrics
+import util.functions as functions
+import os
+
+
+def read_config(path):
+    with open(os.path.join(path, 'config.json'), "r") as read_file:
+        config = json.load(read_file)
+    with open(os.path.join(path, 'meta_config.json'), "r") as read_file:
+        meta_config = json.load(read_file)
+    return config, meta_config 
 
 
 def train_loop(dataloader, model, device, loss_fn, optimizer):
@@ -80,8 +88,6 @@ def test_loop(dataloader, model, device, predict_classes=True):
 
     predicted_labels = []
     real_labels = []
-
-    fst = True
     
     with torch.no_grad():
         for X, y in dataloader:
@@ -92,7 +98,7 @@ def test_loop(dataloader, model, device, predict_classes=True):
             # Getting the binary coded attribute_vector if needed
             if not predict_classes:
                 pred = torch.nn.Sigmoid()(pred)
-                pred = predict_attributes(pred)
+                pred = functions.predict_attributes(pred)
                 #pred = pred.round()
                 pred = pred.cpu().numpy().squeeze()
                 real = y.numpy().squeeze()
@@ -109,62 +115,6 @@ def test_loop(dataloader, model, device, predict_classes=True):
     return np.array([real_labels, predicted_labels], dtype=np.int32)
 
 
-def read_config():
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    with open(os.path.join(__location__, 'config.json'), "r") as read_file:
-        config = json.load(read_file)
-    with open(os.path.join(__location__, 'meta_config.json'), "r") as read_file:
-        meta_config = json.load(read_file)
-    return config, meta_config 
-
-
-def get_combinations():
-    __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    attribute_combinations = pd.read_csv(join(__location__, 'attr_per_class_dataset.csv'), header=None)
-    attribute_combinations = np.array(attribute_combinations)    
-    return np.unique(attribute_combinations[:, 1:], axis=0)
-
-
-def get_weight_vec(dataset, n_labels):
-    count = [0] * n_labels
-    N = 0
-    for _,y in dataset:
-        count[y] += 1
-        N += 1
-    assert N == len(dataset)
-    t = torch.tensor(count)
-    weight_vec = N / t
-    norm = torch.linalg.norm(weight_vec)
-    weight_vec *= n_labels / norm
-    return weight_vec
-
-
-def get_pos_weight_vec(dataset):
-    count = torch.zeros(19)
-    N = 0
-    for _,y in dataset:
-        count += y
-        N += 1
-    assert N == len(dataset)
-    print([x.item() for x in count])
-    weight_vec = [(N - x.item()) / x.item() for x in count]
-    weight_vec = [min(25, x) for x in weight_vec]
-    print(weight_vec)
-    return torch.tensor(weight_vec)
-
-
-def predict_attributes(t):
-    combinations = get_combinations()
-    dists = distance.cdist(t.cpu().numpy(), combinations)
-    dists = torch.from_numpy(dists).to(t.device)
-    min_indices = torch.argmin(dists, dim=1)
-    t_new = torch.empty_like(t)
-    for idx in range(min_indices.shape[0]):
-        min_combination = combinations[min_indices[idx]]
-        t_new[idx] = torch.from_numpy(min_combination)
-    return t_new.to(device=t.device)
-
-
 def run(config):
     dir_path = config['setup']['dir_path']
 
@@ -178,23 +128,24 @@ def run(config):
         json.dump(config, f, indent=4)
     
     # Initializing Cuda
-    device, device_id = utils.init_cuda(config['setup']['device_id'], config['setup']['torch_seed'])
-    logging.info('Device_id = {}'.format(device_id))
+    device = utils.init_cuda(config['setup']['device_id'], config['setup']['torch_seed'])
+    logging.info('Device_id = {}'.format(device))
 
     # Retreiving datasets
-    train_data, test_data, label_dict = get_data(dir_path, config['data'])
-    learn_data, validation_data = split_data(train_data, config['data']['validation_size'], config['data']['split_type'])
-    logging.info('Train_data_persons = {} | Validation_data_persons = {} | Test_data_persons = {}'.format(learn_data.persons, validation_data.persons, test_data.persons))
+    train_dataloader, validation_dataloader, test_dataloader = retrieve_dataloaders(dir_path, config['data'], config['training']['batch_size'])
+    logging.info('Train_data_persons = {} | Validation_data_persons = {} | Test_data_persons = {}'.format(
+        train_dataloader.dataset.persons, validation_dataloader.dataset.persons if validation_dataloader is not None else [], test_dataloader.dataset.persons))
     
     predict_classes = config['data']['classification_type'] == 'classes'
 
     # Choosing Model
-    model_name_ = config['data']['model_name']
-    in_dim_ = train_data.imu.shape[1]
-    out_size_ = len(label_dict) if predict_classes else train_data.labels.shape[1]
-    win_size_ = train_data.window_size
+    model_name = config['data']['model_name']
+    label_dict = train_dataloader.dataset.label_dict
+    dim_in = train_dataloader.dataset.imu.shape[1]
+    dim_out = len(label_dict) if predict_classes else train_dataloader.dataset.labels.shape[1]
+    window_size = train_dataloader.dataset.window_size
     
-    model = model_loader.get_model(model_name_, in_dim_, out_size_, win_size_).to(device)
+    model = model_loader.get_model(model_name, dim_in, dim_out, window_size).to(device)
         
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
@@ -205,12 +156,11 @@ def run(config):
     # Set the loss
     if train_cfg['use_weights_on_loss']:
         if predict_classes:
-            n_labels = out_size_
-            weight_vec = get_weight_vec(train_data, n_labels).to(device)
+            weight_vec = functions.get_weights(train_dataloader, 'weights').to(device)
             logging.info('Weights = {}'.format([x.item() for x in weight_vec]))
             loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec)
         else:
-            pos_weight_vec = get_pos_weight_vec(train_data).to(device)
+            pos_weight_vec = functions.get_weights(train_dataloader, 'pos_weights').to(device)
             logging.info('Pos_Weights = {}'.format([x.item() for x in pos_weight_vec]))
             loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight_vec)
     else:
@@ -220,18 +170,14 @@ def run(config):
     # Set the optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=train_cfg['lr'], eps= train_cfg['eps'], weight_decay=train_cfg['weight_decay'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
-
-    # Set the dataset and data loader
-    loader_params = {'batch_size': train_cfg['batch_size'], 'shuffle': True, 'num_workers': 4}
-    train_dataloader = torch.utils.data.DataLoader(learn_data, **loader_params)
-    valid_dataloader = torch.utils.data.DataLoader(validation_data, **loader_params) if len(validation_data) > 0 else None
     
     logging.info("Training ...")
 
     # Tracking Loss 
     train_loss_avg_prog = []
-    val_loss_avg_prog = []
-    val_acc_prog = []
+    if validation_dataloader is not None:
+        val_loss_avg_prog = []
+        val_acc_prog = []
     
     # Best Model
     best_model_state = copy.deepcopy(model.state_dict())
@@ -243,41 +189,36 @@ def run(config):
     for epoch in range(max(0, train_cfg['n_epochs'])):
         loss = train_loop(train_dataloader, model, device, loss_fn, optimizer)
         
-        if valid_dataloader is None:
+        if validation_dataloader is None:
             logging.info('Epoch[{:02d}]: Loss = {:.3f}'.format(epoch, loss))
-            scheduler.step()
             best_model_state = copy.deepcopy(model.state_dict())
             best_epoch = epoch
-            continue
-        
-        val_loss, val_acc = validation_loop(valid_dataloader, model, device, loss_fn, predict_classes)
-        
-        logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))
+            
+        else:
+            val_loss, val_acc = validation_loop(validation_dataloader, model, device, loss_fn, predict_classes)
+            logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))
 
-        # Tracking some stats
-        train_loss_avg_prog.append(loss)
-        val_loss_avg_prog.append(val_loss)
-        val_acc_prog.append(val_acc)
-    
-        # Update scheduler
-        scheduler.step()
+            # Tracking some stats
+            train_loss_avg_prog.append(loss)
+            val_loss_avg_prog.append(val_loss)
+            val_acc_prog.append(val_acc)
+                    
+            # Update best model yet
+            if val_acc > best_model_acc:
+                best_model_state = copy.deepcopy(model.state_dict())
+                best_model_acc = val_acc
+                best_epoch = epoch
         
-        # Update best model yet
-        if val_acc > best_model_acc:
-            best_model_state = copy.deepcopy(model.state_dict())
-            best_model_acc = val_acc
-            best_epoch = epoch
+            # Update scheduler
+            scheduler.step()
 
     logging.info('Most successful epoch = {:2d}'.format(best_epoch))
     model.load_state_dict(best_model_state)
     logging.info('Training done!')
 
-    stats = np.array([train_loss_avg_prog, val_loss_avg_prog, val_acc_prog], dtype=np.float32)
+    stats = np.array([train_loss_avg_prog, val_loss_avg_prog, val_acc_prog], dtype=np.float32) if validation_dataloader is not None else np.array([train_loss_avg_prog], dtype=np.float32)
     np.save(filename_prefix + '_loss.npy', stats)
     torch.save(model.state_dict(), join(dir_path, filename_prefix + '_model.pth'))
-
-    loader_params = {'batch_size': 1, 'shuffle': False, 'num_workers': 0}
-    test_dataloader = torch.utils.data.DataLoader(test_data, **loader_params)
 
     logging.info("Testing ...")
     classifications = test_loop(test_dataloader, model, device, predict_classes)
@@ -293,29 +234,48 @@ def run(config):
         classification_report = sklearn.metrics.classification_report(classifications[0], classifications[1], target_names=l, zero_division=0)
         logging.info('Classification_report:\n{}'.format(classification_report))
     
-    acc = accuracy_(classifications)
+    acc = functions.accuracy_(classifications)
     logging.info('Accuracy = {:.3f}'.format(acc))
     logging.info('Run finished!')
 
-   
-def accuracy_(classfcn):
-    count = classfcn.shape[1]
-    acc = 0
-    for real, pred in zip(classfcn[0], classfcn[1]):
-        tmp = np.array_equal(real, pred)
-        acc += int(tmp)
-    return acc / count
 
 
-def main():
-    # Reading config.json
-    config, meta_config = read_config()
-    dir_path = config['setup']['dir_path']
-    run_meta = config['setup']['run_meta']
-
-    # Initializing Directory
-    utils.init_dir_structure(dir_path)
+def main():    
+    root_path = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     
+    # Checking for config-files
+    utils.init_configs(root_path)
+    
+    # Reading config.json
+    config, meta_config = read_config(root_path)
+    
+    # Parsing arguments
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('run_meta', help='[Y/N]')
+    arg_parser.add_argument('--path', default=None, help='Path to a root-folder for storing datasets and experiments')
+    
+    args = arg_parser.parse_args()
+    # Evaluating arguments
+    if args.run_meta.upper() not in ['Y', 'N']:
+        raise ValueError('run_meta argument only accepts flags [Y/N].')
+    else:
+        run_meta = args.run_meta.upper() == 'Y'
+    
+    read_dir_path = args.path
+    if read_dir_path is not None and os.path.isdir(read_dir_path):
+        dir_path = read_dir_path
+        config['setup']['dir_path'] = read_dir_path
+        with open(join(root_path, 'config.json'), "w") as f:
+            json.dump(config, f, indent=4)
+    
+    # Initializing Directory
+    dir_path = config['setup']['dir_path']
+    if not os.path.isdir(dir_path):
+        raise ValueError('Directory {} does not exist --> Check config.json or the --path argument.'.format(dir_path))
+    utils.init_dir_structure(dir_path)
+
+    
+    # Running all possible combinations
     if run_meta:
         # Iterating over all Settings:
         for model_name in meta_config['model_name']:
@@ -323,7 +283,7 @@ def main():
                 for window_size in meta_config['window_size']:
                     for split_type in meta_config['split_type']:
                         for torch_seed in meta_config['torch_seed']:
-                            run_cfg = copy.deep_copy(config)
+                            run_cfg = copy.deepcopy(config)
                                     
                             run_cfg['data']['model_name'] = model_name
                             run_cfg['data']['normalize'] = normalize
@@ -333,9 +293,9 @@ def main():
                             
                             run(run_cfg)
     else:
+        # Running only the specified run of config.json
         run(config)
-
+    
 
 if __name__ == '__main__':
     main()
-    

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from os.path import join, exists, isfile
 import os
-from ..utils import download_url
+from util.utils import download_url
 import logging
 import shutil
 

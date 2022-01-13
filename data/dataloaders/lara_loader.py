@@ -3,7 +3,8 @@ import os
 from os.path import join
 import numpy as np
 import pandas as pd
-from ..utils import download_url
+
+# import util.utils as utility_functions
 
 
 def load(path_to_data, classification_type='attributes'):
@@ -25,7 +26,7 @@ def load(path_to_data, classification_type='attributes'):
 
     if not os.path.exists(path):
         logging.info('lara_data not found under {}'.format(path))
-        download_url('https://zenodo.org/record/3862782/files/IMU%20data.zip?download=1', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
+        utility_functions.download_url('https://zenodo.org/record/3862782/files/IMU%20data.zip?download=1', output_path=join(path_to_data, 'data'), tmp_path=join(path_to_data, 'data', 'tmp'), extract_archive=True)
         os.rename(join(path_to_data, 'data', 'IMU data'), join(path_to_data, 'data', 'lara'))
     logging.info('Loading data from {}.'.format(path))
 

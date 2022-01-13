@@ -48,6 +48,7 @@ class IMUTransformerEncoder(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros((1, self.transformer_dim)), requires_grad=True)
 
         self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim), requires_grad=True)
+
         if model_type in ['transformer', 'lara_transformer']:
             self.imu_head = nn.Sequential(
                 nn.LayerNorm(self.transformer_dim),
