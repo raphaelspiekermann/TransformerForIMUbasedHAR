@@ -215,7 +215,7 @@ def run_experiment(config, args):
             # Update scheduler
             scheduler.step()
 
-        logging.info('Most successful epoch = {:2d} (see Val_Loss)'.format(best_epoch))
+        logging.info('Most successful epoch = {:2d}'.format(best_epoch))
         model.load_state_dict(best_model_state)
         logging.info('Training done!')
 

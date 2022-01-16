@@ -17,7 +17,7 @@ def get_model(model_name, dim_in, dim_out, window_size):
         return Transformer.IMUTransformerEncoder(dim_in, dim_out, window_size, model_name)
     
     # RNNs
-    if model_name in ['lstm', 'small_lstm', 'raw_lstm']:
+    if model_name == 'lstm':
         return LSTM.IMU_LSTM(dim_in, dim_out, window_size, model_name)
     
     raise RuntimeError('{} is not a known model'.format(model_name))
