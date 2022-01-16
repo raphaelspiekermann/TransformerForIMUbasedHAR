@@ -1,6 +1,7 @@
 import copy
 import json
 import argparse
+import math
 import torch
 import numpy as np
 import logging
@@ -70,7 +71,7 @@ def validation_loop(dataloader, model, device, loss_fn, predict_classes=True):
                 pred = torch.nn.Sigmoid()(pred)
                 # Debugging
                 check_sum = torch.sum(pred).item()
-                pred = predict_attributes(pred)
+                pred = functions.predict_attributes(pred)
                 #pred = pred.round()
                 assert torch.sum(pred).item() != check_sum
             else:
@@ -115,12 +116,11 @@ def test_loop(dataloader, model, device, predict_classes=True):
     return np.array([real_labels, predicted_labels], dtype=np.int32)
 
 
-def run_experiment(config):
+def run_experiment(config, args):
     dir_path = config['setup']['dir_path']
-
-    # Initializing Logger
-    run_name = utils.init_logger(dir_path)
-    run_folder = join(dir_path, 'runs', run_name)
+    
+    # Initializing experiment and logger
+    run_folder, run_name = utils.init_run(dir_path, args.experiment, args.verbose)
     filename_prefix = join(run_folder, run_name)
     
     # Saving config
@@ -133,109 +133,113 @@ def run_experiment(config):
 
     # Retreiving datasets
     train_dataloader, validation_dataloader, test_dataloader = retrieve_dataloaders(dir_path, config['data'], config['training']['batch_size'])
-    logging.info('Train_data_persons = {} | Validation_data_persons = {} | Test_data_persons = {}'.format(
-        train_dataloader.dataset.persons, validation_dataloader.dataset.persons if validation_dataloader is not None else [], test_dataloader.dataset.persons))
+    train_persons = train_dataloader.dataset.persons if train_dataloader is not None else []
+    validation_persons = validation_dataloader.dataset.persons if validation_dataloader is not None else []
+    test_persons = test_dataloader.dataset.persons if test_dataloader is not None else []
+    
+    logging.info('Train_data_persons = {} | Validation_data_persons = {} | Test_data_persons = {}'.format(train_persons, validation_persons, test_persons))
     
     predict_classes = config['data']['classification_type'] == 'classes'
 
     # Choosing Model
     model_name = config['data']['model_name']
-    label_dict = train_dataloader.dataset.label_dict
-    dim_in = train_dataloader.dataset.imu.shape[1]
-    dim_out = len(label_dict) if predict_classes else train_dataloader.dataset.labels.shape[1]
-    window_size = train_dataloader.dataset.window_size
+    dataset = train_dataloader.dataset if train_dataloader is not None else (validation_dataloader if validation_dataloader is not None else test_dataloader.dataset)
+    label_dict = dataset.label_dict
+    dim_in = dataset.imu.shape[1]
+    dim_out = len(label_dict) if predict_classes else dataset.labels.shape[1]
+    window_size = dataset.window_size
     
     model = model_loader.get_model(model_name, dim_in, dim_out, window_size).to(device)
         
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
 
-    # Preparing training
-    train_cfg = config['training']
+    if train_dataloader is not None:
+        # Preparing training
+        train_cfg = config['training']
 
-    # Set the loss
-    if train_cfg['use_weights_on_loss']:
-        if predict_classes:
-            weight_vec = functions.get_weights(train_dataloader, 'weights').to(device)
-            logging.info('Weights = {}'.format([x.item() for x in weight_vec]))
-            loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec)
+        # Set the loss
+        if train_cfg['use_weights_on_loss']:
+            if predict_classes:
+                weight_vec = functions.get_weights(train_dataloader, validation_dataloader, 'weights').to(device)
+                logging.info('Weights = {}'.format([x.item() for x in weight_vec]))
+                loss_fn = torch.nn.CrossEntropyLoss(weight=weight_vec)
+            else:
+                pos_weight_vec = functions.get_weights(train_dataloader, validation_dataloader, 'pos_weights').to(device)
+                logging.info('Pos_Weights = {}'.format([x.item() for x in pos_weight_vec]))
+                loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight_vec)
         else:
-            pos_weight_vec = functions.get_weights(train_dataloader, 'pos_weights').to(device)
-            logging.info('Pos_Weights = {}'.format([x.item() for x in pos_weight_vec]))
-            loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight_vec)
-    else:
-        loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
-    logging.info('Loss = {}'.format(loss_fn))
+            loss_fn = torch.nn.CrossEntropyLoss() if predict_classes else torch.nn.BCEWithLogitsLoss()
+        logging.info('Loss = {}'.format(loss_fn))
 
-    # Set the optimizer and scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=train_cfg['lr'], eps= train_cfg['eps'], weight_decay=train_cfg['weight_decay'])
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
-    
-    logging.info("Training ...")
-
-    # Tracking Loss 
-    train_loss_avg_prog = []
-    if validation_dataloader is not None:
-        val_loss_avg_prog = []
-        val_acc_prog = []
-    
-    # Best Model
-    best_model_state = copy.deepcopy(model.state_dict())
-    best_model_acc = 0
-    best_epoch = 0
-
-    # Training
-    evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
-    for epoch in range(max(0, train_cfg['n_epochs'])):
-        loss = train_loop(train_dataloader, model, device, loss_fn, optimizer)
+        # Set the optimizer and scheduler
+        optimizer = torch.optim.Adam(model.parameters(), lr=train_cfg['lr'], eps= train_cfg['eps'], weight_decay=train_cfg['weight_decay'])
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=train_cfg['lr_scheduler_step_size'], gamma=train_cfg['lr_scheduler_gamma'])
         
-        if validation_dataloader is None:
-            logging.info('Epoch[{:02d}]: Loss = {:.3f}'.format(epoch, loss))
-            best_model_state = copy.deepcopy(model.state_dict())
-            best_epoch = epoch
+        logging.info("Training ...")
+
+        # Tracking Loss and best Model
+        train_loss_avg_prog = []
+        best_model_state = copy.deepcopy(model.state_dict())        
+        best_epoch = 0
+        if validation_dataloader is not None:
+            val_loss_avg_prog = []
+            val_acc_prog = []
+            best_model_loss = math.inf
+
+        # Training
+        evaluation_str = 'Epoch[{:02d}]: Loss = {:.3f} | Val_Loss = {:.3f} | Val_Acc = {:.3f}'
+        for epoch in range(max(0, train_cfg['n_epochs'])):
+            loss = train_loop(train_dataloader, model, device, loss_fn, optimizer)
             
-        else:
-            val_loss, val_acc = validation_loop(validation_dataloader, model, device, loss_fn, predict_classes)
-            logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))
-
-            # Tracking some stats
-            train_loss_avg_prog.append(loss)
-            val_loss_avg_prog.append(val_loss)
-            val_acc_prog.append(val_acc)
-                    
-            # Update best model yet
-            if val_acc > best_model_acc:
+            if validation_dataloader is None:
+                logging.info('Epoch[{:02d}]: Loss = {:.3f}'.format(epoch, loss))
                 best_model_state = copy.deepcopy(model.state_dict())
-                best_model_acc = val_acc
                 best_epoch = epoch
-        
+                
+            else:
+                val_loss, val_acc = validation_loop(validation_dataloader, model, device, loss_fn, predict_classes)
+                logging.info(evaluation_str.format(epoch, loss, val_loss, val_acc))
+
+                # Tracking some stats
+                train_loss_avg_prog.append(loss)
+                val_loss_avg_prog.append(val_loss)
+                val_acc_prog.append(val_acc)
+                        
+                # Update best model yet
+                if val_loss < best_model_loss:
+                    best_model_state = copy.deepcopy(model.state_dict())
+                    best_model_loss = val_loss
+                    best_epoch = epoch
+            
             # Update scheduler
             scheduler.step()
 
-    logging.info('Most successful epoch = {:2d}'.format(best_epoch))
-    model.load_state_dict(best_model_state)
-    logging.info('Training done!')
+        logging.info('Most successful epoch = {:2d} (see Val_Loss)'.format(best_epoch))
+        model.load_state_dict(best_model_state)
+        logging.info('Training done!')
 
-    stats = np.array([train_loss_avg_prog, val_loss_avg_prog, val_acc_prog], dtype=np.float32) if validation_dataloader is not None else np.array([train_loss_avg_prog], dtype=np.float32)
-    np.save(filename_prefix + '_loss.npy', stats)
-    torch.save(model.state_dict(), join(dir_path, filename_prefix + '_model.pth'))
+        stats = np.array([train_loss_avg_prog, val_loss_avg_prog, val_acc_prog], dtype=np.float32) if validation_dataloader is not None else np.array([train_loss_avg_prog], dtype=np.float32)
+        np.save(filename_prefix + '_loss.npy', stats)
+        torch.save(model.state_dict(), join(dir_path, filename_prefix + '_model.pth'))
 
-    logging.info("Testing ...")
-    classifications = test_loop(test_dataloader, model, device, predict_classes)
-    logging.info("Testing complete!")
+    if test_dataloader is not None:
+        logging.info("Testing ...")
+        classifications = test_loop(test_dataloader, model, device, predict_classes)
+        logging.info("Testing complete!")
 
-    np.save(filename_prefix + '_classifications.npy', classifications)
-    
-    if predict_classes:
-        confusion_matr = sklearn.metrics.confusion_matrix(classifications[0], classifications[1])
-        logging.info('Confusion_matrix:\n {}'.format(confusion_matr))
+        np.save(filename_prefix + '_classifications.npy', classifications)
         
-        l = [label_dict[idx] for idx in range(len(label_dict))]
-        classification_report = sklearn.metrics.classification_report(classifications[0], classifications[1], target_names=l, zero_division=0)
-        logging.info('Classification_report:\n{}'.format(classification_report))
-    
-    acc = functions.accuracy_(classifications)
-    logging.info('Accuracy = {:.3f}'.format(acc))
+        if predict_classes:
+            confusion_matr = sklearn.metrics.confusion_matrix(classifications[0], classifications[1])
+            logging.info('Confusion_matrix:\n {}'.format(confusion_matr))
+            
+            l = [label_dict[idx] for idx in range(len(label_dict))]
+            classification_report = sklearn.metrics.classification_report(classifications[0], classifications[1], target_names=l, zero_division=0)
+            logging.info('Classification_report:\n{}'.format(classification_report))
+        
+        acc = functions.accuracy_(classifications)
+        logging.info('Accuracy = {:.3f}'.format(acc))
     logging.info('Run finished!')
 
 
@@ -251,38 +255,21 @@ def main():
     
     # Adding arguments
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--run_meta', default='n', help='Want to run the meta_config? [y/n]')
-    arg_parser.add_argument('--path', default=None, help='Path to a folder/directory for storing datasets & experiments - overwrites the previously specified path inside the config.')
+    arg_parser.add_argument('-m', '--run_meta', action='store_true', help='Choose if you want to run the meta_config')
+    arg_parser.add_argument('-v', '--verbose', action='store_true', help='Specify if logging outputs should also be printed in stdout')
+    arg_parser.add_argument('--experiment', default=None, help='Name for the experiment')
     
     # Parsing arguments
     args = arg_parser.parse_args()
     
-    # Evaluating the arguments
-    # 1) Specifies if the meta_config should be ran or only the default config
-    if args.run_meta not in ['y','n']:
-        raise ValueError('--run_meta argument only accepts flags [y/n].')
-    elif args.run_meta == 'y':
-            assert os.path.isfile(join(root_path, 'meta_config.json'))
-    
-    # 2) New path for storing datasets and experiment results
-    new_dir_path = args.path
-    if new_dir_path is not None:
-        if os.path.isdir(new_dir_path):
-            config['setup']['dir_path'] = new_dir_path
-            with open(join(root_path, 'config.json'), "w") as f:
-                json.dump(config, f, indent=4)
-        else:
-            raise ValueError('Directory "{}" from the --path argument does not exist.'.format(new_dir_path))
-    
-    # Initializing Directory    
+    # Initializing Directory
     dir_path = config['setup']['dir_path']
     if not os.path.isdir(dir_path):
-        raise ValueError('Directory "{}" does not exist -> check config.json or use the --path argument.'.format(dir_path))
-    utils.init_dir_structure(dir_path)
+        raise ValueError('Directory "{}" does not exist -> check config.json.'.format(dir_path))
+    utils.init_dir_structure(dir_path, args.experiment)
     
-    
-    # Starting the run(s)    
-    if args.run_meta.upper() == 'Y':
+    # Starting the run(s)
+    if args.run_meta: 
         # Iterating over all Settings:
         for model_name in meta_config['model_name']:
             for normalize in meta_config['normalize']:
@@ -297,16 +284,11 @@ def main():
                             run_cfg['data']['split_type'] = split_type
                             run_cfg['setup']['torch_seed'] = torch_seed
                             
-                            run_experiment(run_cfg)
+                            run_experiment(run_cfg, args)
     else:
         # Running only the specified run of config.json
-        run_experiment(config)
+        run_experiment(config, args)
     
 
 if __name__ == '__main__':
-    try:
-        main()
-    except ValueError as v:
-        print(v)
-    except Warning as w:
-        print(w)
+    main()

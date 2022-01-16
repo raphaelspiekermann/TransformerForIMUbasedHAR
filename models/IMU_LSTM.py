@@ -1,16 +1,32 @@
 import torch
 import torch.nn as nn
 
+def get_settings(m, input_dim):
+    if m == 'small_lstm':
+        return 64, 2
+    if m == 'lstm':
+        return 128, 2
+    if m == 'raw_lstm':
+        return input_dim, 2
+    raise RuntimeError
+
+
 class IMU_LSTM(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, lstm_dim):
+    def __init__(self, input_dim, output_dim, window_size, model_type):
         super().__init__()
         self.output_dim = output_dim
         self.window_size = window_size
-        self.lstm_dim = lstm_dim
-        self.n_layers = 3
+        self.lstm_dim, self.n_layers = get_settings(model_type, input_dim)
+        self.model_type = model_type
         
-        self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.lstm_dim, 1), nn.GELU(),
-                                        nn.Conv1d(self.lstm_dim, self.lstm_dim, 1), nn.GELU())
+        if self.model_type == 'lstm':
+            self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.lstm_dim, 1), nn.GELU(),
+                                            nn.Conv1d(self.lstm_dim, self.lstm_dim, 1), nn.GELU(),
+                                            nn.Conv1d(self.lstm_dim, self.lstm_dim, 1), nn.GELU(),
+                                            nn.Conv1d(self.lstm_dim, self.lstm_dim, 1), nn.GELU())
+        
+        if self.model_type == 'small_lstm':
+            self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.lstm_dim, 1), nn.GELU())
         
         self.position_embed = nn.Parameter(torch.randn(self.window_size, 1, self.lstm_dim), requires_grad=True)
         
@@ -28,28 +44,23 @@ class IMU_LSTM(nn.Module):
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        
-        self.fst = True
 
     def __str__(self):
         return 'IMU_LSTM'
 
     def forward(self, src):
         # Embed in a high dimensional space and reshape to LSTM's expected shape
-        src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
+        if self.model_type != 'raw_lstm':
+            src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
+        else:
+            src = src.permute(1, 0, 2)
         
         # Add the position embedding
         src += self.position_embed
 
         # LSTM pass
-        output, (h_out, _) = self.lstm(src)
+        _, (h_out, _) = self.lstm(src)
         target = h_out[-1]
-        
-        if self.fst:
-            self.fst = False
-            print('LSTM_OUTPUT_DIM = {}'.format(output.shape))
-            print('LSTM_h_out_DIM = {}'.format(h_out.shape) )
-            print('LSTM_h_out[0]_DIM = {}'.format(target.shape))
-    
+            
         # Class/Attr probability
         return self.imu_head(target)

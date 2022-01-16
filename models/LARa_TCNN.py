@@ -17,8 +17,8 @@ class Lara_TCNN(nn.Module):
         self.conv3 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=kernel_size), nn.ReLU())
         self.conv4 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=kernel_size), nn.ReLU())     
         
-        kernel_losses = 4 * (kernel_size[0] - 1)
-        fc_in_dim =  64 * (self.win_size - kernel_losses) * self.dim
+        kernel_red = 4 * (kernel_size[0] - 1)
+        fc_in_dim =  64 * (self.win_size - kernel_red) * self.dim
 
         self.fc1 = nn.Linear(fc_in_dim, 128, nn.ReLU())
         self.fc2 = nn.Linear(128, 128, nn.ReLU())

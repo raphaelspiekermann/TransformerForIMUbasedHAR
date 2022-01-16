@@ -1,29 +1,32 @@
-import json
 import torch
 import pandas as pd
 import numpy as np
 import os
-from os.path import join
+from os.path import join, split
 from scipy.spatial import distance
 
 
 def get_combinations():
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    attribute_combinations = pd.read_csv(join(__location__, 'data', 'attr_per_class_dataset.csv'), header=None)
+    attribute_combinations = pd.read_csv(join(split(__location__)[0], 'data', 'attr_per_class_dataset.csv'), header=None)
     attribute_combinations = np.array(attribute_combinations)
     return np.unique(attribute_combinations[:, 1:], axis=0)
 
 
-def get_weights(dataloader, type):
-    dataset = dataloader.dataset
-    vector_size = np.unique(dataset.labels, axis=0).shape[0] if type == 'weights' else dataset.labels[0].shape[0]
+def get_weights(train_dataloader, validation_dataloader, type):
+    train_data = train_dataloader.dataset
+    validation_data = validation_dataloader.dataset if validation_dataloader is not None else None
+    vector_size = np.unique(train_data.labels, axis=0).shape[0] if type == 'weights' else train_data.labels[0].shape[0]
     
-    N = len(dataset)
+    N = len(train_data) + len(validation_data) if validation_dataloader is not None else len(train_data)
     
     if type == 'weights':
         count = [0] * vector_size
-        for _,y in dataset:
+        for _,y in train_data:
             count[y] += 1
+        if validation_dataloader is not None:
+            for _,y in validation_data:
+                count[y] += 1
         t = torch.tensor(count)
         weight_vec = N / t
         norm = torch.linalg.norm(weight_vec)
@@ -32,8 +35,11 @@ def get_weights(dataloader, type):
     
     if type == 'pos_weights':
         count = torch.zeros(vector_size)
-        for _,y in dataset:
+        for _,y in train_data:
             count += y
+        if validation_dataloader is not None:
+            for _,y in validation_data:
+                count += y
         weight_vec = [(N - x.item()) / x.item() for x in count]
         return torch.tensor(weight_vec)
     

@@ -16,29 +16,33 @@ def create_dir(path, name):
         mkdir(out_dir)
     return out_dir
 
-
-def init_logger(dir_path):
+def init_run(dir_path, experiment, verbose):
     path = split(realpath(__file__))[0]
     with open(join(path, 'log_config.json')) as json_file:
         log_config_dict = json.load(json_file)
         run_name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
-        path = create_dir(join(dir_path, 'runs'), run_name)
+        path = create_dir(join(dir_path, 'runs'), run_name) if experiment is None else create_dir(join(dir_path, 'experiments', experiment), run_name)
 
-        log_config_dict.get('handlers').get('file_handler')['filename'] = join(path, '{}.log'.format(run_name))
+        log_config_dict['handlers']['file_handler']['filename'] = join(path, '{}.log'.format(run_name))
+        log_config_dict['handlers']['screen_handler']['level'] = 'INFO' if verbose else 'WARNING'
+        
         logging.config.dictConfig(log_config_dict)
 
         # disable external modules' loggers (level warning and below)
         logging.getLogger(PIL.__name__).setLevel(logging.WARNING)
-        return run_name
+        return path, run_name
 
 
-def init_dir_structure(data_path):
+def init_dir_structure(data_path, experiment=None):
     parent_dir = split(data_path)[0]
     dir_name = split(data_path)[1]
     create_dir(parent_dir, dir_name)
     data_dir = join(parent_dir, dir_name)
     create_dir(data_dir, 'runs')
     create_dir(data_dir, 'data')
+    experiment_dir = create_dir(data_dir, 'experiments')
+    if experiment is not None:
+        create_dir(experiment_dir, experiment)
  
 
 def init_configs(root_path):
@@ -57,9 +61,12 @@ def init_cuda(device_id, torch_seed):
     if torch.cuda.is_available():
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+        if device_id == 'cpu':
+            logging.warning('Running on cpu even tho CUDA is available!')
     else:
         device_id = 'cpu'
-    return torch.device(device_id)
+    device = torch.device(device_id)
+    return device
 
 
 def download_url(url, output_path, tmp_path=None, extract_archive=False):

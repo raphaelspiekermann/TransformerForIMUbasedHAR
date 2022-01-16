@@ -45,11 +45,13 @@ def retrieve_dataloaders(path, config, batch_size):
     # Preprocessing
     if c_type == 'classes':
         labels = labels.flatten()
-        imu_data, labels, infos, label_dict = preprocessing(imu_data, labels, infos, label_dict)
         
     # Normalize data
     if config['normalize']:
-        imu_data = min_max_normalization(imu_data)
+        # Z-Score Normalization
+        imu_data = (imu_data - np.mean(imu_data, axis=0)) / np.std(imu_data, axis=0)
+        # Adding noise
+        imu_data += 0.01 * torch.randn(imu_data.shape).numpy()
         
     # Preperation for splitting the data by recorded persons
     test_size = config['test_size']
@@ -107,6 +109,7 @@ def retrieve_dataloaders(path, config, batch_size):
     logging.info('Window_size = {}'.format(window_size))
     logging.info('Stepsize = {}'.format(window_shift))
     logging.info('Normalize = {}'.format(config['normalize']))
+    logging.info('Label_dict = {}'.format(label_dict))
     
     # Datasets
     train_data = IMUDataset(start_indices_train_data, imu_data, labels, window_size, label_dict, train_persons)
@@ -115,40 +118,12 @@ def retrieve_dataloaders(path, config, batch_size):
     
     # Dataloaders
     loader_params = {'batch_size': batch_size, 'shuffle': True, 'num_workers': 2}
-    train_loader = torch.utils.data.DataLoader(train_data, **loader_params)
+    train_loader = torch.utils.data.DataLoader(train_data, **loader_params) if len(train_data) > 0 else None
     validation_loader = torch.utils.data.DataLoader(validation_data, **loader_params) if len(validation_data) > 0 else None
     
     loader_params = {'batch_size': 1, 'shuffle': False, 'num_workers': 0}
-    test_loader = torch.utils.data.DataLoader(test_data, **loader_params)
+    test_loader = torch.utils.data.DataLoader(test_data, **loader_params) if len(test_data) > 0 else None
     
     # Done
     return train_loader, validation_loader, test_loader
 
-
-# Preprocessing utility
-def preprocessing(features, labels, infos, label_dict):
-    logging.info('Preprocessing - Removing Null & None Label')
-    label_dict = {k: v.upper() for k, v in label_dict.items()}
-    valid_indices = [idx for idx, label in enumerate(labels) if label_dict.get(label) not in ['NULL', 'NONE']]
-    features = np.array([features[idx] for idx in valid_indices], dtype=np.float32)
-    labels = np.array([labels[idx] for idx in valid_indices], dtype=np.int32)
-    infos = np.array([infos[idx] for idx in valid_indices], dtype=np.int32)
-
-    unique_labels = np.unique(labels)
-    unique_labels = np.sort(unique_labels)
-    n_features = unique_labels.shape[0]
-    translation_dict = {idx:unique_labels[idx] for idx in range(n_features)}
-    new_dict = {lbl: label_dict[translation_dict[lbl]] for lbl in translation_dict.keys()}
-
-    reverse_translation_dict = {v: k for k, v in translation_dict.items()}
-    labels = np.array([reverse_translation_dict[lbl] for lbl in labels], dtype=np.int32)
-
-    return features, labels, infos, new_dict
-
-
-def min_max_normalization(data):
-    for ch in range(data.shape[1]):
-        max_ch = np.max(data[:, ch])
-        min_ch = np.min(data[:, ch])
-        data[:, ch] = (data[:, ch] - min_ch) / (max_ch - min_ch)
-    return data + 0.01 * torch.randn(data.shape).numpy()
