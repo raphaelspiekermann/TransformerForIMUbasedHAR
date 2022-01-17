@@ -3,55 +3,42 @@ import torch
 from torch import nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
-def get_settings(m, input_dim):
-    if m == 'small_transformer':
-        return 32, 4, 64, 4
-    if m == 'transformer':
-        return 64, 8, 128, 6
-    if m == 'raw_transformer':
-        return input_dim, get_nhead(input_dim), 128, 6
-    if m == 'lara_transformer':
-        return 64, 8, 128, 6
-    raise RuntimeError
-
 
 class IMUTransformerEncoder(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, model_type):
+    def __init__(self, input_dim, output_dim, window_size, transformer_dim=64, n_head=8, dim_fc=128, n_layers=6, n_embedding_layers=4, use_pos_embedding=True):
         super().__init__()
-
-        transformer_dim, n_head, dim_feed_forward, n_layers = get_settings(model_type, input_dim)
         
-        self.transformer_dim = transformer_dim
+        self.input_dim = input_dim
         self.output_dim = output_dim
         self.window_size = window_size
-        self.model_type = model_type
+        self.transformer_dim = transformer_dim if n_embedding_layers > 0 else input_dim
+        self.n_head = get_nhead(self.transformer_dim, n_head)
+        self.dim_fc = dim_fc
+        self.n_layers = n_layers
+        self.n_embedding_layers = n_embedding_layers
+        self.use_pos_embedding = use_pos_embedding
         
-        if model_type == 'transformer':
-            self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU(),
-                                    nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU(),
-                                    nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU(),
-                                    nn.Conv1d(self.transformer_dim, self.transformer_dim, 1), nn.GELU())
+        self.input_proj = nn.ModuleList()
+        for _ in range(self.n_embedding_layers):
+            d_in = self.input_dim if len(self.input_proj) == 0 else self.transformer_dim
+            conv_layer = nn.Sequential(nn.Conv1d(d_in, self.transformer_dim, 1), nn.GELU())
+            self.input_proj.append(conv_layer)
+            
+        self.cls_token = nn.Parameter(torch.zeros((1, self.transformer_dim)))
         
-        if model_type == 'small_transformer':
-            self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU())
-        
-        if model_type == 'lara_transformer':
-            self.input_proj = nn.Sequential(nn.Conv1d(input_dim, self.transformer_dim, 1), nn.GELU())
-        
+        if self.use_pos_embedding:
+            self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim))
+    
         encoder_layer = TransformerEncoderLayer(d_model = self.transformer_dim,
-                                       nhead = n_head,
-                                       dim_feedforward = dim_feed_forward,
-                                       dropout = 0.1,
+                                       nhead = self.n_head,
+                                       dim_feedforward = self.dim_fc,
                                        activation = 'gelu')
 
         self.transformer_encoder = TransformerEncoder(encoder_layer,
-                                              num_layers = n_layers,
+                                              num_layers = self.n_layers,
                                               norm = nn.LayerNorm(self.transformer_dim))
                                               
-        self.cls_token = nn.Parameter(torch.zeros((1, self.transformer_dim)), requires_grad=True)
 
-        self.position_embed = nn.Parameter(torch.randn(self.window_size + 1, 1, self.transformer_dim), requires_grad=True)
-       
         self.imu_head = nn.Sequential(
                 nn.LayerNorm(self.transformer_dim),
                 nn.Linear(self.transformer_dim,  self.transformer_dim//4),
@@ -68,28 +55,35 @@ class IMUTransformerEncoder(nn.Module):
         return 'Transformer_Encoder with dim={}'.format(self.transformer_dim)
 
     def forward(self, src):
-        # Embed in a high dimensional space and reshape to Transformer's expected shape
-        if self.model_type != 'raw_transformer':
-            src = self.input_proj(src.transpose(1, 2)).permute(2, 0, 1)
-        else:
-            src = src.permute(1, 0, 2)
+        # Input [B, Win, D]
+        # Reshaping to [B, D, Win]
+        target = src.transpose(1, 2)
+        
+        # Embedding Input into (higher dim) latent vector-space -> [B, D', Win]
+        for conv_layer in self.input_proj:
+            target = conv_layer(target)
+        
             
-        # Prepend class token
-        cls_token = self.cls_token.unsqueeze(1).repeat(1, src.shape[1], 1)
-        src = torch.cat([cls_token, src])
-
+        # Reshaping: [B, D', Win] -> [Win, B, D'] 
+        target = target.permute(2, 0, 1)
+            
+        # Prepend class token: [Win, B, D']  -> [Win+1, B, D']
+        cls_token = self.cls_token.unsqueeze(1).repeat(1, target.shape[1], 1)
+        target = torch.cat([cls_token, target])
+    
         # Add the position embedding
-        src += self.position_embed
+        if self.use_pos_embedding:
+            target += self.position_embed
         
         # Transformer Encoder pass
-        target = self.transformer_encoder(src)[0]
+        target = self.transformer_encoder(target)[0]
 
-        # Class/Attr probability
+        # Pass through fully-connected layers
         return self.imu_head(target)
+    
 
-
-def get_nhead(dim):
-    for hd in range(min(8, dim-1), 0, -1):
-        if dim % hd == 0:
+def get_nhead(embed_dim, n_head):
+    for hd in range(n_head, 0, -1):
+        if embed_dim % hd == 0:
             logging.info('N_head = {}'.format(hd))
             return hd
