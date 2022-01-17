@@ -150,7 +150,7 @@ def run_experiment(config, args):
     window_size = dataset.window_size
     
     model = model_loader.get_model(model_name, dim_in, dim_out, window_size).to(device)
-        
+            
     pytorch_total_params = sum(p.numel() for p in model.parameters())
     logging.info('Model: {} with {} parameters.'.format(model, pytorch_total_params))
 

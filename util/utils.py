@@ -8,6 +8,7 @@ from os import mkdir, remove
 import torch
 import urllib.request
 import zipfile
+from ptflops import get_model_complexity_info
 
 
 def create_dir(path, name):
@@ -62,12 +63,18 @@ def init_cuda(device_id, torch_seed):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         if device_id == 'cpu':
-            logging.warning('Running on cpu even tho CUDA is available!')
+            logging.warning('Running on CPU, despite CUDA being available!')
     else:
         device_id = 'cpu'
     device = torch.device(device_id)
     return device
 
+
+def count_flops(model):
+    macs, params = get_model_complexity_info(model, (100, 30), as_strings=True,
+                                           print_per_layer_stat=False, verbose=False)
+    logging.info('{:<25}  {:<8}'.format('Computational complexity: ', macs))
+    logging.info('{:<25}  {:<8}'.format('Number of parameters: ', params))
 
 def download_url(url, output_path, tmp_path=None, extract_archive=False):
     logging.info('Downloading from {}'.format(url))
@@ -105,7 +112,7 @@ def generate_example_config(path):
             "n_epochs": 30
         },
         "setup": {
-            "dir_path": "ADD PATH HERE - or run with --path argument",
+            "dir_path": "ADD PATH HERE",
             "torch_seed": 0,
             "device_id": "cpu"
         }
@@ -118,11 +125,11 @@ def generate_example_config(path):
 
 def generate_example_meta_config(path):
     meta_config = {
-	"model_name": [],
-	"normalize": [],
-	"window_size": [],	
-	"split_type": [],
-	"torch_seed": []
+    "model_name": ["Baseline", "TCNN_1D", "TCNN_2D", "TCNN_2D_no_pooling", "Transformer", "Transformer_no_pos_embed", "Transformer_no_input_embed", "LSTM_hidden", "LSTM_token"],
+    "normalize": [True],
+    "window_size": [100, 74, 50, 24],
+    "split_type": ["person"],
+    "torch_seed": [0, 42,1337]
     }
     path = join(path, 'meta_config.json')
     with open(path, "w") as f:

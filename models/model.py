@@ -24,7 +24,7 @@ def get_model(model_name, dim_in, dim_out, window_size):
     # Transformer
     if model_name in ['Transformer', 'Transformer_no_pos_embed', 'Transformer_no_input_embed']:
         cfg = model_config[model_name]
-        return Transformer.IMUTransformerEncoder(dim_in, dim_out, window_size, cfg['transformer_dim'], cfg['n_head'], cfg['dim_fc'], cfg['n_layers'], cfg['n_embedding_layers'], cfg['use_pos_embedding'])
+        return Transformer.IMUTransformerEncoder(dim_in, dim_out, window_size, cfg['transformer_dim'], cfg['n_head'], cfg['fc_dim'], cfg['n_layers'], cfg['n_embedding_layers'], cfg['use_pos_embedding'])
     
     # RNNs
     if model_name in ['LSTM_hidden', 'LSTM_token']:

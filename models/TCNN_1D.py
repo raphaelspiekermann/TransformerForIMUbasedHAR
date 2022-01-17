@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 class TCNN_1D(nn.Module):
-    def __init__(self, input_dim, output_dim, win_size, n_filters=64, kernel_size=1, n_convolutions=2, fc_dim=128, dropout=0.1, pooling_layer='None'):  
+    def __init__(self, input_dim, output_dim, win_size, n_filters=64, kernel_size=1, n_convolutions=2, dim_fc=128, dropout=0.1, pooling_layer='None'):  
         super(TCNN_1D, self).__init__()
         
         pooling_layer = pooling_layer.lower()
@@ -13,7 +13,7 @@ class TCNN_1D(nn.Module):
         self.n_filters = n_filters
         self.kernel_size = kernel_size
         self.n_convolutions = n_convolutions
-        self.fc_dim = fc_dim
+        self.dim_fc = dim_fc
         self.use_pooling = pooling_layer in ['avg', 'max']
         
         self.convolutions = nn.ModuleList()
@@ -31,8 +31,8 @@ class TCNN_1D(nn.Module):
         d_in = self.n_filters * (self.win_size - self.n_convolutions * (self.kernel_size - 1))
         d_in = d_in // 2 if self.use_pooling else d_in
         
-        self.fc1 = nn.Linear(d_in, self.fc_dim, nn.ReLU())
-        self.fc2 = nn.Linear(self.fc_dim, self.output_dim)
+        self.fc1 = nn.Linear(d_in, self.dim_fc, nn.ReLU())
+        self.fc2 = nn.Linear(self.dim_fc, self.output_dim)
         
         # init
         for p in self.parameters():

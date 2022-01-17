@@ -41,7 +41,7 @@
     {
         "transformer_dim": 64,
         "n_head": 8,
-        "dim_fc": 128,
+        "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 4,
         "use_pos_embedding": true
@@ -50,21 +50,19 @@
     {
         "transformer_dim": 64,
         "n_head": 8,
-        "dim_fc": 128,
+        "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 4,
         "use_pos_embedding": false
-
     },
     "Transformer_no_input_embed":
     {
         "transformer_dim": 64,
         "n_head": 8,
-        "dim_fc": 128,
+        "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 0,
         "use_pos_embedding": true
-
     },
     "LSTM_hidden":
     {

@@ -2,7 +2,7 @@ import torch.nn as nn
 import numpy
 
 class TCNN_2D(nn.Module):
-    def __init__(self, input_dim, output_dim, win_size, imu_dim, n_filters=64, kernel_size=5, n_convolutions=2, fc_dim = 128, dropout=0.1, pooling_layer='None'):        
+    def __init__(self, input_dim, output_dim, win_size, imu_dim, n_filters=64, kernel_size=5, n_convolutions=2, dim_fc = 128, dropout=0.1, pooling_layer='None'):        
         super(TCNN_2D, self).__init__()
         assert input_dim % imu_dim == 0
         
@@ -17,7 +17,7 @@ class TCNN_2D(nn.Module):
         self.n_filters = n_filters
         self.kernel_size = kernel_size
         self.n_convolutions = n_convolutions
-        self.fc_dim = fc_dim
+        self.dim_fc = dim_fc
         self.use_pooling = pooling_layer in ['avg', 'max']
 
         self.convolutions = nn.ModuleList()
@@ -37,8 +37,8 @@ class TCNN_2D(nn.Module):
         d_in = self.n_filters * self.n_devices * win_size_after_conv
         d_in = d_in // self.n_devices if self.use_pooling else d_in
         
-        self.fc1 = nn.Linear(d_in, self.fc_dim, nn.ReLU())
-        self.fc2 = nn.Linear(self.fc_dim, output_dim)
+        self.fc1 = nn.Linear(d_in, self.dim_fc, nn.ReLU())
+        self.fc2 = nn.Linear(self.dim_fc, output_dim)
 
         # init
         for p in self.parameters():
