@@ -264,8 +264,6 @@ def main():
     
     # Initializing Directory
     dir_path = config['setup']['dir_path']
-    if not os.path.isdir(dir_path):
-        raise ValueError('Directory "{}" does not exist -> check config.json.'.format(dir_path))
     utils.init_dir_structure(dir_path, args.experiment)
     
     # Starting the run(s)

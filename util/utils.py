@@ -2,7 +2,7 @@ import logging
 import logging.config
 import PIL
 import json
-from os.path import join, exists, split, realpath, isfile
+from os.path import join, exists, split, realpath, isfile, isdir
 import time
 from os import mkdir, remove
 import torch
@@ -36,6 +36,8 @@ def init_run(dir_path, experiment, verbose):
 
 def init_dir_structure(data_path, experiment=None):
     parent_dir = split(data_path)[0]
+    if not isdir(parent_dir):
+        raise ValueError('Directory "{}" does not exist -> check config.json.'.format(parent_dir))
     dir_name = split(data_path)[1]
     create_dir(parent_dir, dir_name)
     data_dir = join(parent_dir, dir_name)
