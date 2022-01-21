@@ -70,10 +70,8 @@ def validation_loop(dataloader, model, device, loss_fn, predict_classes=True):
             if not predict_classes:
                 pred = torch.nn.Sigmoid()(pred)
                 # Debugging
-                check_sum = torch.sum(pred).item()
                 pred = functions.predict_attributes(pred)
                 #pred = pred.round()
-                assert torch.sum(pred).item() != check_sum
             else:
                 pred = pred.argmax(dim=1)
                 
