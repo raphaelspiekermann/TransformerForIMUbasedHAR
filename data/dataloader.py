@@ -27,7 +27,7 @@ class IMUDataset(Dataset):
         return imu, label
 
 
-def load_data(dir_path, dataset, classification_type=None):
+def load_data(dir_path, dataset, classification_type='classes'):
     if dataset == 'motionsense':  
         return motionsense.load(dir_path)
     if dataset == 'lara': 
@@ -51,7 +51,7 @@ def retrieve_dataloaders(path, config, batch_size):
         # Z-Score Normalization
         imu_data = (imu_data - np.mean(imu_data, axis=0)) / np.std(imu_data, axis=0)
         # Adding noise
-        imu_data += 0.01 * torch.randn(imu_data.shape).numpy()
+        imu_data += np.random.RandomState(seed=42).normal(0, 0.01, imu_data.shape)
         
     # Preperation for splitting the data by recorded persons
     test_size = config['test_size']

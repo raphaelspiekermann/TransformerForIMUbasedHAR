@@ -73,7 +73,7 @@ def preprocessing(features, labels, infos, label_dict):
     logging.info('Preprocessing LARa-Data - Removing None Values')
     classes = labels[:,0]
     valid_indices = [idx for idx, label in enumerate(classes) if label_dict.get(label) != 'None']
-    features = np.array([features[idx] for idx in valid_indices], dtype=np.float32)
+    features = np.array([features[idx] for idx in valid_indices], dtype=np.float64)
     labels = np.array([labels[idx] for idx in valid_indices], dtype=np.int32)
     infos = np.array([infos[idx] for idx in valid_indices], dtype=np.int32)
 

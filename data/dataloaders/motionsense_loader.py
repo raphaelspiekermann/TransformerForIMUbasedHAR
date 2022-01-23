@@ -15,7 +15,7 @@ def load(path_to_data):
 
     path = join(path_to_data, 'data', 'motionsense')
 
-    features = np.zeros((0, 6), dtype=np.float32)
+    features = np.zeros((0, 6), dtype=np.float64)
     labels = np.zeros((0, 1), dtype=np.int32)
     infos = np.zeros((0, 2), dtype=np.int32)
 
@@ -35,7 +35,7 @@ def load(path_to_data):
                 path_to_csv = join(path, dir + rec_, file_name)
                 if isfile(path_to_csv):
                     dataset = pd.read_csv(path_to_csv) 
-                    raw_features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'attitude.roll', 'attitude.pitch', 'attitude.yaw']]
+                    raw_features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'rotationRate.x', 'rotationRate.y', 'rotationRate.z']]
 
                     lbls = np.zeros((len(raw_features), 1), dtype=np.int32)
                     lbls[:,0] = lbl_dict[dir]
