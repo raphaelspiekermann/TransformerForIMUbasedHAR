@@ -8,7 +8,6 @@ from os import mkdir, remove
 import torch
 import urllib.request
 import zipfile
-from ptflops import get_model_complexity_info
 
 
 def create_dir(path, name):
@@ -71,12 +70,6 @@ def init_cuda(device_id, torch_seed):
     device = torch.device(device_id)
     return device
 
-
-def count_flops(model):
-    macs, params = get_model_complexity_info(model, (100, 30), as_strings=True,
-                                           print_per_layer_stat=False, verbose=False)
-    logging.info('{:<25}  {:<8}'.format('Computational complexity: ', macs))
-    logging.info('{:<25}  {:<8}'.format('Number of parameters: ', params))
 
 def download_url(url, output_path, tmp_path=None, extract_archive=False):
     logging.info('Downloading from {}'.format(url))
