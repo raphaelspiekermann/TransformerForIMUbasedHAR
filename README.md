@@ -14,5 +14,5 @@
         - -m for running multiple experiments from meta_config.json
         - --experiment name_of_experiment: experiments will be stored under path_from_config/experiments/name_of_experiment
     - Examples for basic usage:
-        - python3 main.py -v                        --> single experiment specified in config.json
-        - python3 main.py -m --experiment exp1234   --> multiple experiment, settings from meta_config overwrite config for each run, usefull if for example you want to run the same experiment with different seeds          
+        - python3 main.py -v: single experiment specified in config.json
+        - python3 main.py -m --experiment exp1234: multiple experiment, settings from meta_config overwrite config for each run, usefull if for example you want to run the same experiment with different seeds          
