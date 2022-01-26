@@ -16,6 +16,7 @@ def create_dir(path, name):
         mkdir(out_dir)
     return out_dir
 
+
 def init_run(dir_path, experiment, verbose):
     path = split(realpath(__file__))[0]
     with open(join(path, 'log_config.json')) as json_file:
@@ -86,12 +87,12 @@ def download_url(url, output_path, tmp_path=None, extract_archive=False):
 def generate_example_config(path):
     config = {
         "data": {
-            "model_name": "transformer",
+            "model_name": "Transformer",
             "dataset": "lara",
             "classification_type": "classes",
             "normalize": True,
             "window_size": 100,
-            "window_shift": 5,
+            "window_shift": 20,
             "test_size": 0.15,
             "validation_size": 0.25,
             "split_type": "person"
