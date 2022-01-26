@@ -2,7 +2,7 @@
 2) pip install -r requirements.txt
 3) run main.py -> generates config.json & meta_config.json  
 4) Setup config.json: 
-    - Add a Path to a directory where the data and experiment results will be saved:\\
+    - Add a Path to a directory where the data and experiment results will be saved:\n
         > Example: /home/user/transformer_experiments (folder "transformer_experiments" will be generated if not already existing)
         > 3 Subfolders "data" for storing dataset, "runs" for single experiments and "experiments" for experiments containing multiple subexperiments will be created
     - model: check models/model_configs.json for different models
