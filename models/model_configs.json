@@ -25,7 +25,7 @@
         "n_convolutions": 4,
         "fc_dim": 128,
         "dropout": 0.1,
-        "pooling_layer": "avg"
+        "pooling_layer": "max"
     },
     "TCNN_2D_no_pooling":
     {
