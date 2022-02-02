@@ -8,7 +8,6 @@ from os import mkdir, remove
 import torch
 import urllib.request
 import zipfile
-from ptflops import get_model_complexity_info
 
 
 def create_dir(path, name):
@@ -16,6 +15,7 @@ def create_dir(path, name):
     if not exists(out_dir):
         mkdir(out_dir)
     return out_dir
+
 
 def init_run(dir_path, experiment, verbose):
     path = split(realpath(__file__))[0]
@@ -72,12 +72,6 @@ def init_cuda(device_id, torch_seed):
     return device
 
 
-def count_flops(model):
-    macs, params = get_model_complexity_info(model, (100, 30), as_strings=True,
-                                           print_per_layer_stat=False, verbose=False)
-    logging.info('{:<25}  {:<8}'.format('Computational complexity: ', macs))
-    logging.info('{:<25}  {:<8}'.format('Number of parameters: ', params))
-
 def download_url(url, output_path, tmp_path=None, extract_archive=False):
     logging.info('Downloading from {}'.format(url))
     filename = tmp_path if extract_archive else output_path
@@ -93,12 +87,12 @@ def download_url(url, output_path, tmp_path=None, extract_archive=False):
 def generate_example_config(path):
     config = {
         "data": {
-            "model_name": "transformer",
+            "model_name": "Transformer",
             "dataset": "lara",
             "classification_type": "classes",
             "normalize": True,
             "window_size": 100,
-            "window_shift": 5,
+            "window_shift": 20,
             "test_size": 0.15,
             "validation_size": 0.25,
             "split_type": "person"

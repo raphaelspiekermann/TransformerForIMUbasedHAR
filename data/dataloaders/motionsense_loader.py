@@ -1,3 +1,4 @@
+
 from genericpath import isfile
 import numpy as np
 import pandas as pd
@@ -16,8 +17,8 @@ def load(path_to_data):
     path = join(path_to_data, 'data', 'motionsense')
 
     features = np.zeros((0, 6), dtype=np.float64)
-    labels = np.zeros((0, 1), dtype=np.int32)
-    infos = np.zeros((0, 2), dtype=np.int32)
+    labels = np.zeros((0, 1), dtype=np.int64)
+    infos = np.zeros((0, 2), dtype=np.int64)
 
     if not exists(path):
         logging.info('motionsense_data not found under {}'.format(path))
@@ -37,10 +38,10 @@ def load(path_to_data):
                     dataset = pd.read_csv(path_to_csv) 
                     raw_features = dataset[['userAcceleration.x', 'userAcceleration.y', 'userAcceleration.z', 'rotationRate.x', 'rotationRate.y', 'rotationRate.z']]
 
-                    lbls = np.zeros((len(raw_features), 1), dtype=np.int32)
+                    lbls = np.zeros((len(raw_features), 1), dtype=np.int64)
                     lbls[:,0] = lbl_dict[dir]
 
-                    infs = np.zeros((len(raw_features), 2), dtype=np.int32)
+                    infs = np.zeros((len(raw_features), 2), dtype=np.int64)
                     infs[:,0] = sub
                     infs[:,1] = rec
 

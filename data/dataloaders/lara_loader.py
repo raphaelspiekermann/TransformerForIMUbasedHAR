@@ -74,8 +74,8 @@ def preprocessing(features, labels, infos, label_dict):
     classes = labels[:,0]
     valid_indices = [idx for idx, label in enumerate(classes) if label_dict.get(label) != 'None']
     features = np.array([features[idx] for idx in valid_indices], dtype=np.float64)
-    labels = np.array([labels[idx] for idx in valid_indices], dtype=np.int32)
-    infos = np.array([infos[idx] for idx in valid_indices], dtype=np.int32)
+    labels = np.array([labels[idx] for idx in valid_indices], dtype=np.int64)
+    infos = np.array([infos[idx] for idx in valid_indices], dtype=np.int64)
 
     unique_classes = np.sort(np.unique(classes))
     n_classes = unique_classes.shape[0]
@@ -83,6 +83,6 @@ def preprocessing(features, labels, infos, label_dict):
     new_dict = {lbl: label_dict[translation_dict[lbl]] for lbl in translation_dict.keys()}
 
     reverse_translation_dict = {v: k for k, v in translation_dict.items()}
-    labels[:,0] = np.array([reverse_translation_dict[c] for c in classes], dtype=np.int32)
+    labels[:,0] = np.array([reverse_translation_dict[c] for c in classes], dtype=np.int64)
 
     return features, labels, infos, new_dict

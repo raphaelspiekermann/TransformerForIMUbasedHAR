@@ -71,7 +71,6 @@ def validation_loop(dataloader, model, device, loss_fn, predict_classes=True):
                 pred = torch.nn.Sigmoid()(pred)
                 # Debugging
                 pred = functions.predict_attributes(pred)
-                #pred = pred.round()
             else:
                 pred = pred.argmax(dim=1)
                 
@@ -98,7 +97,6 @@ def test_loop(dataloader, model, device, predict_classes=True):
             if not predict_classes:
                 pred = torch.nn.Sigmoid()(pred)
                 pred = functions.predict_attributes(pred)
-                #pred = pred.round()
                 pred = pred.cpu().numpy().squeeze()
                 real = y.numpy().squeeze()
             else:
@@ -246,8 +244,8 @@ def main():
     
     # Creating configs if needed
     if (utils.init_configs(root_path)) < 0 :
-        raise Warning('Files config.json and/or meta_config.json have/has been generated. Please set them up as needed and run again!')
-    
+        print('Files config.json and/or meta_config.json have/has been generated. Please set them up as needed and run again!')
+        return -1 
     # Reading config.json
     config, meta_config = read_config(root_path)
     
