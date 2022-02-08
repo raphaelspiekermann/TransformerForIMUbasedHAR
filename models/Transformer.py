@@ -5,7 +5,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
 class IMUTransformerEncoder(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, transformer_dim=64, n_head=8, dim_fc=128, n_layers=6, n_embedding_layers=4, use_pos_embedding=True):
+    def __init__(self, input_dim, output_dim, window_size, transformer_dim=64, n_head=8, dim_fc=128, n_layers=6, n_embedding_layers=4, use_pos_embedding=True, activation_function='gelu'):
         super().__init__()
         
         self.input_dim = input_dim
@@ -17,11 +17,12 @@ class IMUTransformerEncoder(nn.Module):
         self.n_layers = n_layers
         self.n_embedding_layers = n_embedding_layers
         self.use_pos_embedding = use_pos_embedding
+        self.activation_function = nn.GELU() if activation_function.lower() == 'gelu' else nn.ReLU()
         
         self.input_proj = nn.ModuleList()
         for _ in range(self.n_embedding_layers):
             d_in = self.input_dim if len(self.input_proj) == 0 else self.transformer_dim
-            conv_layer = nn.Sequential(nn.Conv1d(d_in, self.transformer_dim, 1), nn.GELU())
+            conv_layer = nn.Sequential(nn.Conv1d(d_in, self.transformer_dim, 1), self.activation_function)
             self.input_proj.append(conv_layer)
             
         self.cls_token = nn.Parameter(torch.zeros((1, self.transformer_dim)))
@@ -33,17 +34,16 @@ class IMUTransformerEncoder(nn.Module):
                                        nhead = self.n_head,
                                        dim_feedforward = self.dim_fc,
                                        dropout = 0.1,
-                                       activation = 'gelu')
+                                       activation = self.activation_function)
 
         self.transformer_encoder = TransformerEncoder(encoder_layer,
                                               num_layers = self.n_layers,
                                               norm = nn.LayerNorm(self.transformer_dim))
-                                              
 
         self.imu_head = nn.Sequential(
                 nn.LayerNorm(self.transformer_dim),
-                nn.Linear(self.transformer_dim,  self.transformer_dim//4),
-                nn.GELU(),
+                nn.Linear(self.transformer_dim, self.transformer_dim//4),
+                self.activation_function,
                 nn.Dropout(0.1),
                 nn.Linear(self.transformer_dim//4, output_dim))
 
@@ -53,7 +53,7 @@ class IMUTransformerEncoder(nn.Module):
                 nn.init.xavier_uniform_(p)
 
     def __str__(self):
-        return 'Transformer_Encoder with dim={}'.format(self.transformer_dim)
+        return 'Transformer_Encoder with dim={} & activation={}'.format(self.transformer_dim, str(self.activation_function))
 
     def forward(self, src):
         # Input [B, Win, D]

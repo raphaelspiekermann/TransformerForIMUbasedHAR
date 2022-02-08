@@ -28,6 +28,7 @@ class TCNN_1D(nn.Module):
             self.pooling_layer = nn.AvgPool1d(2) if pooling_layer=='avg' else nn.MaxPool1d(2)
         
         # Computing input_dim for the first fc-layer
+        # TODO Fehler abfangen -> Negative Fenstergrößen wenn convolution failt
         d_in = self.n_filters * (self.win_size - self.n_convolutions * (self.kernel_size - 1))
         d_in = d_in // 2 if self.use_pooling else d_in
         

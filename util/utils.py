@@ -121,7 +121,7 @@ def generate_example_config(path):
 
 def generate_example_meta_config(path):
     meta_config = {
-    "model_name": ["Baseline", "TCNN_1D", "TCNN_2D", "TCNN_2D_no_pooling", "Transformer", "Transformer_no_pos_embed", "Transformer_no_input_embed", "LSTM_hidden", "LSTM_token"],
+    "model_name": ["Baseline", "TCNN_1D", "TCNN_2D", "TCNN_2D_no_pooling", "Transformer", "Transformer_ReLU", "Transformer_no_pos_embed", "Transformer_no_input_embed", "LSTM_hidden", "LSTM_token"],
     "normalize": [True],
     "window_size": [100, 74, 50, 24],
     "split_type": ["person"],

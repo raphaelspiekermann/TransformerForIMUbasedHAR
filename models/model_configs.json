@@ -44,7 +44,18 @@
         "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 4,
-        "use_pos_embedding": true
+        "use_pos_embedding": true,
+        "activation": "gelu"
+    },
+    "Transformer_ReLU":
+    {
+        "transformer_dim": 64,
+        "n_head": 8,
+        "fc_dim": 128,
+        "n_layers": 6,
+        "n_embedding_layers": 4,
+        "use_pos_embedding": true,
+        "activation": "relu"
     },
     "Transformer_no_pos_embed":
     {
@@ -53,7 +64,8 @@
         "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 4,
-        "use_pos_embedding": false
+        "use_pos_embedding": false,
+        "activation": "gelu"
     },
     "Transformer_no_input_embed":
     {
@@ -62,7 +74,8 @@
         "fc_dim": 128,
         "n_layers": 6,
         "n_embedding_layers": 0,
-        "use_pos_embedding": true
+        "use_pos_embedding": true,
+        "activation": "gelu"
     },
     "LSTM_hidden":
     {
@@ -70,7 +83,8 @@
         "n_layers": 2,
         "n_embedding_layers": 4,
         "use_pos_embedding": true,
-        "use_class_token": false
+        "use_class_token": false,
+        "activation": "gelu"
     },
     "LSTM_token":
     {
@@ -78,6 +92,7 @@
         "n_layers": 2,
         "n_embedding_layers": 4,
         "use_pos_embedding": true,
-        "use_class_token": true
+        "use_class_token": true,
+        "activation": "gelu"
     }
 }

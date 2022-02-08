@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class IMU_LSTM(nn.Module):
-    def __init__(self, input_dim, output_dim, window_size, lstm_dim=128, n_layers=1, n_embedding_layers=4, use_pos_embedding=True, use_class_token=False):
+    def __init__(self, input_dim, output_dim, window_size, lstm_dim=128, n_layers=1, n_embedding_layers=4, use_pos_embedding=True, use_class_token=False, activation_function='gelu'):
         super().__init__()
         
         self.input_dim = input_dim
@@ -14,11 +14,12 @@ class IMU_LSTM(nn.Module):
         self.n_embedding_layers = n_embedding_layers
         self.use_pos_embedding = use_pos_embedding
         self.use_class_token = use_class_token
+        self.activation_function = nn.GELU() if activation_function.lower() == 'gelu' else nn.ReLU()
         
         self.input_proj = nn.ModuleList()
         for _ in range(self.n_embedding_layers):
             d_in = self.input_dim if len(self.input_proj) == 0 else self.lstm_dim
-            conv_layer = nn.Sequential(nn.Conv1d(d_in, self.lstm_dim, 1), nn.GELU())
+            conv_layer = nn.Sequential(nn.Conv1d(d_in, self.lstm_dim, 1), self.activation_function)
             self.input_proj.append(conv_layer)
         
         if self.use_class_token:
@@ -35,7 +36,7 @@ class IMU_LSTM(nn.Module):
         self.imu_head = nn.Sequential(
                 nn.LayerNorm(self.lstm_dim),
                 nn.Linear(self.lstm_dim, self.lstm_dim // 4),
-                nn.GELU(),
+                self.activation_function,
                 nn.Dropout(0.1),
                 nn.Linear(self.lstm_dim // 4, output_dim))
     
@@ -45,7 +46,7 @@ class IMU_LSTM(nn.Module):
                 nn.init.xavier_uniform_(p)
 
     def __str__(self):
-        return 'IMU_LSTM'
+        return 'IMU_LSTM with activation {}'.format(str(self.activation_function))
 
     def forward(self, src):        
         # Input [B, Win, D]
