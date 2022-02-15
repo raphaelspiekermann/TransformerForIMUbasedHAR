@@ -8,7 +8,7 @@
         "dropout": 0.1,
         "pooling_layer": "max"
     },
-    "TCNN_1D":
+    "tCNN-1D":
     {
         "n_filters": 64,
         "kernel_size": 5,
@@ -17,17 +17,7 @@
         "dropout": 0.1,
         "pooling_layer": "none"
     },
-    "TCNN_2D":
-    {
-        "imu_dim": 6,
-        "n_filters": 64,
-        "kernel_size": 5,
-        "n_convolutions": 4,
-        "fc_dim": 128,
-        "dropout": 0.1,
-        "pooling_layer": "max"
-    },
-    "TCNN_2D_no_pooling":
+    "tCNN-2D":
     {
         "imu_dim": 6,
         "n_filters": 64,
@@ -37,7 +27,7 @@
         "dropout": 0.1,
         "pooling_layer": "none"
     },
-    "Transformer":
+    "Transformer-Default":
     {
         "transformer_dim": 64,
         "n_head": 8,
@@ -47,17 +37,17 @@
         "use_pos_embedding": true,
         "activation": "gelu"
     },
-    "Transformer_ReLU":
+    "Transformer-Big":
     {
-        "transformer_dim": 64,
-        "n_head": 8,
-        "fc_dim": 128,
-        "n_layers": 6,
+        "transformer_dim": 128,
+        "n_head": 16,
+        "fc_dim": 256,
+        "n_layers": 8,
         "n_embedding_layers": 4,
         "use_pos_embedding": true,
-        "activation": "relu"
+        "activation": "gelu"
     },
-    "Transformer_no_pos_embed":
+    "Transformer-NoPos":
     {
         "transformer_dim": 64,
         "n_head": 8,
@@ -67,7 +57,7 @@
         "use_pos_embedding": false,
         "activation": "gelu"
     },
-    "Transformer_no_input_embed":
+    "Transformer-NoCNN":
     {
         "transformer_dim": 64,
         "n_head": 8,
@@ -77,7 +67,7 @@
         "use_pos_embedding": true,
         "activation": "gelu"
     },
-    "LSTM_hidden":
+    "LSTM-Hidden":
     {
         "lstm_dim": 128,
         "n_layers": 2,
@@ -86,7 +76,7 @@
         "use_class_token": false,
         "activation": "gelu"
     },
-    "LSTM_token":
+    "LSTM-Token":
     {
         "lstm_dim": 128,
         "n_layers": 2,

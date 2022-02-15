@@ -121,11 +121,11 @@ def generate_example_config(path):
 
 def generate_example_meta_config(path):
     meta_config = {
-    "model_name": ["Baseline", "TCNN_1D", "TCNN_2D", "TCNN_2D_no_pooling", "Transformer", "Transformer_ReLU", "Transformer_no_pos_embed", "Transformer_no_input_embed", "LSTM_hidden", "LSTM_token"],
+    "model_name": ["Baseline", "tCNN-1D", "tCNN-2D",  "Transformer-Default", "Transformer-Big", "Transformer-NoPos", "Transformer-NoCNN", "LSTM-Hidden", "LSTM-Token"],
     "normalize": [True],
-    "window_size": [100, 74, 50, 24],
+    "window_size": [100, 90, 80, 70, 60, 50, 40, 30, 20],
     "split_type": ["person"],
-    "torch_seed": [0, 42,1337]
+    "torch_seed": [0, 16, 42, 666, 1337]
     }
     path = join(path, 'meta_config.json')
     with open(path, "w") as f:
